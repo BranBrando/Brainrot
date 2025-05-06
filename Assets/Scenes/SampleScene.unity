@@ -151,6 +151,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e8523c9c923bc104c8857cdf2badf48f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  playerCollisionLinearDamping: 100
 --- !u!61 &309519102
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -208,8 +209,8 @@ Rigidbody2D:
   m_BodyType: 0
   m_Simulated: 1
   m_UseFullKinematicContacts: 0
-  m_UseAutoMass: 1
-  m_Mass: 10.606611
+  m_UseAutoMass: 0
+  m_Mass: 1
   m_LinearDamping: 0
   m_AngularDamping: 0.05
   m_GravityScale: 1
@@ -223,7 +224,7 @@ Rigidbody2D:
   m_Interpolate: 0
   m_SleepingMode: 1
   m_CollisionDetection: 0
-  m_Constraints: 0
+  m_Constraints: 4
 --- !u!212 &309519104
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -356,7 +357,7 @@ BoxCollider2D:
     drawMode: 1
     adaptiveTiling: 0
   m_AutoTiling: 1
-  m_Size: {x: 0.1, y: 0.124375254}
+  m_Size: {x: 0.13, y: 0.124375254}
   m_EdgeRadius: 0
 --- !u!212 &404909272
 SpriteRenderer:
@@ -687,9 +688,9 @@ GameObject:
   - component: {fileID: 823349997}
   - component: {fileID: 823350003}
   - component: {fileID: 823350004}
-  m_Layer: 3
+  m_Layer: 7
   m_Name: Player
-  m_TagString: Untagged
+  m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -708,6 +709,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveSpeed: 15
   jumpForce: 5
+  dashSpeed: 50
+  dashDuration: 0.2
+  dashCooldown: 0.5
   groundCheckPoint: {fileID: 1051599954}
   groundCheckSize: {x: 0.001, y: 0.001}
   groundLayer:
@@ -876,7 +880,7 @@ Rigidbody2D:
   m_GameObject: {fileID: 823349996}
   m_BodyType: 0
   m_Simulated: 1
-  m_UseFullKinematicContacts: 0
+  m_UseFullKinematicContacts: 1
   m_UseAutoMass: 0
   m_Mass: 1
   m_LinearDamping: 0
@@ -891,7 +895,7 @@ Rigidbody2D:
     m_Bits: 0
   m_Interpolate: 0
   m_SleepingMode: 1
-  m_CollisionDetection: 0
+  m_CollisionDetection: 1
   m_Constraints: 4
 --- !u!212 &823350001
 SpriteRenderer:
@@ -979,7 +983,7 @@ MonoBehaviour:
   attackRange: 1
   attackSize: {x: 3, y: 2}
   attackOffset: {x: 2, y: 0}
-  knockbackForce: 15
+  knockbackForce: 5
   hittableLayer:
     serializedVersion: 2
     m_Bits: 64
@@ -1014,7 +1018,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1051599954}
-  m_Layer: 3
+  m_Layer: 7
   m_Name: GroundCheck
   m_TagString: Untagged
   m_Icon: {fileID: 0}
