@@ -13,11 +13,13 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private Transform groundCheckPoint;
     [SerializeField] private Vector2 groundCheckSize = new Vector2(0.4f, 0.1f); // Width and height of the boxcast
     [SerializeField] private LayerMask groundLayer;
+    [SerializeField] private float groundCheckYOffset = -0.1f;
 
     private Rigidbody2D rb;
     private PlayerInput playerInput;
     private InputAction moveAction;
     private InputAction jumpAction;
+    private Collider2D playerCollider;
 
     private bool isGrounded;
     private bool canDoubleJump;
@@ -31,6 +33,54 @@ public class PlayerMovement : MonoBehaviour
         // Ensure the Action Map name matches the one in your Input Actions asset
         moveAction = playerInput.actions["Player/Move"];
         jumpAction = playerInput.actions["Player/Jump"];
+
+        playerCollider = GetComponent<Collider2D>();
+        if (playerCollider == null)
+        {
+            Debug.LogError("PlayerMovement: No Collider2D found on this GameObject. GroundCheckPoint positioning might be inaccurate.");
+        }
+
+        if (groundCheckPoint != null)
+        {
+            float targetLocalY;
+            if (playerCollider != null)
+            {
+                // Calculate the world Y position of the collider's bottom edge.
+                // bounds.center is the center of the AABB in world space.
+                // bounds.extents is half the size of the AABB.
+                float worldColliderBottomY = playerCollider.bounds.center.y - playerCollider.bounds.extents.y;
+
+                // To set groundCheckPoint.localPosition.y, we need to convert this world Y
+                // into a local Y relative to the player's transform.
+                // We'll construct a point in world space at the collider's bottom,
+                // using the groundCheckPoint's current world X and Z to maintain its horizontal alignment.
+                Vector3 worldPointAtColliderBottom = new Vector3(
+                    groundCheckPoint.position.x, // Use groundCheckPoint's current world X
+                    worldColliderBottomY,
+                    groundCheckPoint.position.z  // Use groundCheckPoint's current world Z
+                );
+
+                // Convert this world point to a local position relative to this player's transform.
+                // Then, take the Y component and add the offset.
+                targetLocalY = transform.InverseTransformPoint(worldPointAtColliderBottom).y + groundCheckYOffset;
+            }
+            else
+            {
+                // Fallback: If no collider, use the offset from the transform's pivot (original behavior)
+                targetLocalY = groundCheckYOffset;
+                Debug.LogWarning("PlayerMovement: Collider2D not found. GroundCheckPoint offset from transform pivot.");
+            }
+
+            groundCheckPoint.localPosition = new Vector3(
+                groundCheckPoint.localPosition.x, // Keep existing local X
+                targetLocalY,
+                groundCheckPoint.localPosition.z  // Keep existing local Z
+            );
+        }
+        else
+        {
+            Debug.LogError("PlayerMovement: GroundCheckPoint is not assigned in the Inspector!");
+        }
     }
 
     void OnEnable()
