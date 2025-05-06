@@ -24,7 +24,7 @@ public class PlayerMovement : MonoBehaviour
     private PlayerInput playerInput;
     private InputAction moveAction;
     private InputAction jumpAction;
-    private InputAction sprintAction;
+    private InputAction dashAction;
     private Collider2D playerCollider;
 
     private bool isGrounded;
@@ -44,7 +44,7 @@ public class PlayerMovement : MonoBehaviour
         // Ensure the Action Map name matches the one in your Input Actions asset
         moveAction = playerInput.actions["Player/Move"];
         jumpAction = playerInput.actions["Player/Jump"];
-        sprintAction = playerInput.actions["Player/Sprint"];
+        dashAction = playerInput.actions["Player/Dash"];
         originalGravityScale = rb.gravityScale;
 
         playerCollider = GetComponent<Collider2D>();
@@ -99,13 +99,13 @@ public class PlayerMovement : MonoBehaviour
     void OnEnable()
     {
         jumpAction.performed += OnJump;
-        sprintAction.performed += TriggerDash;
+        dashAction.performed += TriggerDash;
     }
 
     void OnDisable()
     {
         jumpAction.performed -= OnJump;
-        sprintAction.performed -= TriggerDash;
+        dashAction.performed -= TriggerDash;
     }
 
     void Update()
