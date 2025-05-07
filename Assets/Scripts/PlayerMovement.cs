@@ -8,6 +8,8 @@ public class PlayerMovement : MonoBehaviour
     [Header("Movement Settings")]
     [SerializeField] private float moveSpeed = 5f;
     [SerializeField] private float jumpForce = 10f;
+    [SerializeField] private float fallGravityMultiplier = 2.5f; // Multiplies gravity when falling
+    [SerializeField] private float lowJumpGravityMultiplier = 2f;  // Multiplies gravity if jump is released early while rising
 
     [Header("Dash Settings")]
     [SerializeField] private float dashSpeed = 20f;
@@ -25,6 +27,7 @@ public class PlayerMovement : MonoBehaviour
     private InputAction moveAction;
     private InputAction jumpAction;
     private InputAction dashAction;
+    private Animator anim;
     private Collider2D playerCollider;
 
     private bool isGrounded;
@@ -46,6 +49,12 @@ public class PlayerMovement : MonoBehaviour
         jumpAction = playerInput.actions["Player/Jump"];
         dashAction = playerInput.actions["Player/Dash"];
         originalGravityScale = rb.gravityScale;
+
+        anim = GetComponentInChildren<Animator>(); // Or GetComponent<Animator>() if it's on the root
+        if (anim == null)
+        {
+            Debug.LogWarning("PlayerMovement: Animator component not found on Player or its children.");
+        }
 
         playerCollider = GetComponent<Collider2D>();
         if (playerCollider == null)
@@ -102,6 +111,7 @@ public class PlayerMovement : MonoBehaviour
         dashAction.performed += TriggerDash;
     }
 
+
     void OnDisable()
     {
         jumpAction.performed -= OnJump;
@@ -111,11 +121,38 @@ public class PlayerMovement : MonoBehaviour
     void Update()
     {
         // Read horizontal movement input
-        moveDirection = moveAction.ReadValue<Vector2>().x;
+        if (!isDashing) // Only read moveDirection if not dashing for movement
+        {
+            moveDirection = moveAction.ReadValue<Vector2>().x;
+        }
+        else // if dashing, ensure moveDirection reflects dash for animation if needed
+        {
+             // If you want walking animation during dash based on dashDirection:
+             // moveDirection = dashDirection.x; 
+             // Or keep it 0 if dash has its own animation triggered separately.
+             // For now, let's assume dash doesn't use the 'speed' parameter for walking.
+        }
 
         if (dashCooldownTimer > 0)
         {
             dashCooldownTimer -= Time.deltaTime;
+        }
+
+        // Animation control for speed
+        if (anim != null)
+        {
+            if (isDashing)
+            {
+                // If dashing, you might want speed to be 0 (if dash has its own anim)
+                // or based on dash speed if it's a super-run.
+                // For a burst dash, usually set to 0 or trigger a specific dash animation.
+                anim.SetFloat("speed", 0f); 
+            }
+            else
+            {
+                // Use the magnitude of the Rigidbody's horizontal velocity for the speed parameter
+                anim.SetFloat("speed", Mathf.Abs(rb.linearVelocity.x));
+            }
         }
     }
 
@@ -127,8 +164,22 @@ public class PlayerMovement : MonoBehaviour
         {
             HandleDashPhysics();
         }
-        else
+        else // Not dashing: Apply custom gravity logic and then normal movement
         {
+            if (rb.linearVelocity.y < 0 && !isGrounded) // Player is falling
+            {
+                rb.gravityScale = originalGravityScale * fallGravityMultiplier;
+            }
+            // Player is rising AND jump button is released AND not grounded (for variable jump height)
+            else if (rb.linearVelocity.y > 0 && !jumpAction.IsPressed() && !isGrounded)
+            {
+                rb.gravityScale = originalGravityScale * lowJumpGravityMultiplier;
+            }
+            else // Grounded or normal jump ascent with button held
+            {
+                rb.gravityScale = originalGravityScale;
+            }
+
             HandleMovement(); // Normal movement
         }
     }

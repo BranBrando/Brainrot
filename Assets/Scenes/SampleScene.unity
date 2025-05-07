@@ -583,8 +583,8 @@ MonoBehaviour:
   enemyTargets:
   - {fileID: 309519105}
   padding: 5
-  minOrthographicSize: 3
-  maxOrthographicSize: 10
+  minOrthographicSize: 5
+  maxOrthographicSize: 15
   positionSmoothTime: 0.2
   sizeSmoothTime: 0.2
   offset: {x: 0, y: 0, z: -10}
@@ -708,7 +708,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   moveSpeed: 15
-  jumpForce: 5
+  jumpForce: 10
+  fallGravityMultiplier: 5
+  lowJumpGravityMultiplier: 5
   dashSpeed: 50
   dashDuration: 0.2
   dashCooldown: 0.5

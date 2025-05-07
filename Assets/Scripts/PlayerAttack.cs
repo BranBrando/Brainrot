@@ -12,11 +12,17 @@ public class PlayerAttack : MonoBehaviour
 
     private PlayerInput playerInput;
     private InputAction attackAction;
+    private Animator anim;
 
     void Awake()
     {
         playerInput = GetComponent<PlayerInput>();
         attackAction = playerInput.actions["Player/Attack"]; // Assuming "Player" action map and "Attack" action
+        anim = GetComponentInChildren<Animator>(); // Or GetComponent<Animator>()
+        if (anim == null)
+        {
+            Debug.LogWarning("PlayerAttack: Animator component not found on Player or its children.");
+        }
     }
 
     void OnEnable()
@@ -31,6 +37,11 @@ public class PlayerAttack : MonoBehaviour
 
     private void OnAttack(InputAction.CallbackContext context)
     {
+        if (anim != null)
+        {
+            anim.SetTrigger("attack"); // Or SetBool("attack", true); if using a bool
+        }
+
         // Calculate attack position and size
         Vector2 attackPosition = (Vector2)transform.position + attackOffset;
 
