@@ -714,6 +714,10 @@ MonoBehaviour:
   dashSpeed: 50
   dashDuration: 0.2
   dashCooldown: 0.5
+  enemyLayer:
+    serializedVersion: 2
+    m_Bits: 64
+  dashEnemyCheckRadius: 10
   groundCheckPoint: {fileID: 1051599954}
   groundCheckSize: {x: 0.001, y: 0.001}
   groundLayer:
@@ -983,8 +987,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   attackRange: 1
-  attackSize: {x: 3, y: 2}
-  attackOffset: {x: 2, y: 0}
+  attackSize: {x: 7, y: 2}
+  attackOffset: {x: 4, y: 0}
   knockbackForce: 5
   hittableLayer:
     serializedVersion: 2

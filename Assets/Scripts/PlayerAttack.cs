@@ -42,8 +42,12 @@ public class PlayerAttack : MonoBehaviour
             anim.SetTrigger("attack"); // Or SetBool("attack", true); if using a bool
         }
 
-        // Calculate attack position and size
-        Vector2 attackPosition = (Vector2)transform.position + attackOffset;
+        // Determine current facing direction for attack offset
+        bool isFacingRight = transform.localScale.x > 0;
+        Vector2 currentAttackOffset = isFacingRight ? attackOffset : new Vector2(-attackOffset.x, attackOffset.y);
+
+        // Calculate attack position using the potentially flipped offset
+        Vector2 attackPosition = (Vector2)transform.position + currentAttackOffset;
 
         // Detect all colliders within the attack range
         Collider2D[] hitColliders = Physics2D.OverlapBoxAll(attackPosition, attackSize, 0, hittableLayer);
@@ -68,7 +72,11 @@ public class PlayerAttack : MonoBehaviour
     void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.red;
-        Vector2 attackPosition = (Vector2)transform.position + attackOffset;
+        // Determine current facing direction for gizmo offset
+        bool isFacingRight = transform.localScale.x > 0;
+        Vector2 currentAttackOffset = isFacingRight ? attackOffset : new Vector2(-attackOffset.x, attackOffset.y);
+        // Calculate attack position using the potentially flipped offset
+        Vector2 attackPosition = (Vector2)transform.position + currentAttackOffset;
         Gizmos.DrawWireCube(attackPosition, attackSize);
     }
 }

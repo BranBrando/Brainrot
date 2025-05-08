@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using System.Collections.Generic; // Required for List
 
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(PlayerInput))]
@@ -15,6 +16,10 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float dashSpeed = 20f;
     [SerializeField] private float dashDuration = 0.2f;
     [SerializeField] private float dashCooldown = 1f;
+    [SerializeField] private LayerMask enemyLayer; // Layer enemies are on
+    [SerializeField] private float dashEnemyCheckRadius = 1.5f; // Radius to check for enemies to ignore
+
+    private List<Collider2D> ignoredEnemyColliders = new List<Collider2D>();
 
     [Header("Ground Check")]
     [SerializeField] private Transform groundCheckPoint;
@@ -34,6 +39,7 @@ public class PlayerMovement : MonoBehaviour
     private bool canDoubleJump;
     private float moveDirection;
     private bool isDashing;
+    private bool isFacingRight = true; // Added for sprite flipping
     private float currentDashTime;
     private float dashCooldownTimer;
     private Vector2 dashDirection;
@@ -47,7 +53,7 @@ public class PlayerMovement : MonoBehaviour
         // Ensure the Action Map name matches the one in your Input Actions asset
         moveAction = playerInput.actions["Player/Move"];
         jumpAction = playerInput.actions["Player/Jump"];
-        dashAction = playerInput.actions["Player/Dash"];
+        dashAction = playerInput.actions["Player/Dash"]; // Ensure this action exists in your Input Actions asset
         originalGravityScale = rb.gravityScale;
 
         anim = GetComponentInChildren<Animator>(); // Or GetComponent<Animator>() if it's on the root
@@ -59,45 +65,13 @@ public class PlayerMovement : MonoBehaviour
         playerCollider = GetComponent<Collider2D>();
         if (playerCollider == null)
         {
-            Debug.LogError("PlayerMovement: No Collider2D found on this GameObject. GroundCheckPoint positioning might be inaccurate.");
+            Debug.LogError("PlayerMovement: No Collider2D found on this GameObject. Cannot implement dash-through enemies.");
         }
 
+        // Adjust ground check point based on collider
         if (groundCheckPoint != null)
         {
-            float targetLocalY;
-            if (playerCollider != null)
-            {
-                // Calculate the world Y position of the collider's bottom edge.
-                // bounds.center is the center of the AABB in world space.
-                // bounds.extents is half the size of the AABB.
-                float worldColliderBottomY = playerCollider.bounds.center.y - playerCollider.bounds.extents.y;
-
-                // To set groundCheckPoint.localPosition.y, we need to convert this world Y
-                // into a local Y relative to the player's transform.
-                // We'll construct a point in world space at the collider's bottom,
-                // using the groundCheckPoint's current world X and Z to maintain its horizontal alignment.
-                Vector3 worldPointAtColliderBottom = new Vector3(
-                    groundCheckPoint.position.x, // Use groundCheckPoint's current world X
-                    worldColliderBottomY,
-                    groundCheckPoint.position.z  // Use groundCheckPoint's current world Z
-                );
-
-                // Convert this world point to a local position relative to this player's transform.
-                // Then, take the Y component and add the offset.
-                targetLocalY = transform.InverseTransformPoint(worldPointAtColliderBottom).y + groundCheckYOffset;
-            }
-            else
-            {
-                // Fallback: If no collider, use the offset from the transform's pivot (original behavior)
-                targetLocalY = groundCheckYOffset;
-                Debug.LogWarning("PlayerMovement: Collider2D not found. GroundCheckPoint offset from transform pivot.");
-            }
-
-            groundCheckPoint.localPosition = new Vector3(
-                groundCheckPoint.localPosition.x, // Keep existing local X
-                targetLocalY,
-                groundCheckPoint.localPosition.z  // Keep existing local Z
-            );
+            PositionGroundCheck();
         }
         else
         {
@@ -105,157 +79,191 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
+    void PositionGroundCheck()
+    {
+        if (playerCollider != null)
+        {
+            float worldColliderBottomY = playerCollider.bounds.center.y - playerCollider.bounds.extents.y;
+            Vector3 worldPointAtColliderBottom = new Vector3(
+                groundCheckPoint.position.x, 
+                worldColliderBottomY,
+                groundCheckPoint.position.z
+            );
+            float targetLocalY = transform.InverseTransformPoint(worldPointAtColliderBottom).y + groundCheckYOffset;
+            groundCheckPoint.localPosition = new Vector3(
+                groundCheckPoint.localPosition.x, 
+                targetLocalY,
+                groundCheckPoint.localPosition.z
+            );
+        }
+        else
+        {
+            // Fallback if no collider
+            groundCheckPoint.localPosition = new Vector3(
+                groundCheckPoint.localPosition.x, 
+                groundCheckYOffset, 
+                groundCheckPoint.localPosition.z
+            );
+            Debug.LogWarning("PlayerMovement: Collider2D not found. GroundCheckPoint offset from transform pivot.");
+        }
+    }
+
+
     void OnEnable()
     {
         jumpAction.performed += OnJump;
         dashAction.performed += TriggerDash;
     }
 
-
     void OnDisable()
     {
+        // Ensure collisions are re-enabled if disabled during dash
+        if (playerCollider != null)
+        {
+            foreach (Collider2D enemyCollider in ignoredEnemyColliders)
+            {
+                if (enemyCollider != null) 
+                {
+                    Physics2D.IgnoreCollision(playerCollider, enemyCollider, false);
+                }
+            }
+        }
+        ignoredEnemyColliders.Clear();
+
         jumpAction.performed -= OnJump;
         dashAction.performed -= TriggerDash;
     }
 
     void Update()
     {
-        // Read horizontal movement input
-        if (!isDashing) // Only read moveDirection if not dashing for movement
+        HandleInput();
+        UpdateCooldowns();
+        UpdateAnimator();
+    }
+
+    void HandleInput()
+    {
+        if (!isDashing) 
         {
             moveDirection = moveAction.ReadValue<Vector2>().x;
         }
-        else // if dashing, ensure moveDirection reflects dash for animation if needed
-        {
-             // If you want walking animation during dash based on dashDirection:
-             // moveDirection = dashDirection.x; 
-             // Or keep it 0 if dash has its own animation triggered separately.
-             // For now, let's assume dash doesn't use the 'speed' parameter for walking.
-        }
+    }
 
-        if (dashCooldownTimer > 0)
+    void UpdateCooldowns()
+    {
+         if (dashCooldownTimer > 0)
         {
             dashCooldownTimer -= Time.deltaTime;
         }
+    }
 
-        // Animation control for speed
+    void UpdateAnimator()
+    {
         if (anim != null)
         {
             if (isDashing)
             {
-                // If dashing, you might want speed to be 0 (if dash has its own anim)
-                // or based on dash speed if it's a super-run.
-                // For a burst dash, usually set to 0 or trigger a specific dash animation.
-                anim.SetFloat("speed", 0f); 
+                anim.SetFloat("speed", 0f); // Or trigger a specific dash animation
             }
             else
             {
-                // Use the magnitude of the Rigidbody's horizontal velocity for the speed parameter
                 anim.SetFloat("speed", Mathf.Abs(rb.linearVelocity.x));
             }
         }
     }
 
+
     void FixedUpdate()
     {
-        PerformGroundCheck(); // Always perform ground check
+        PerformGroundCheck(); 
 
         if (isDashing)
         {
             HandleDashPhysics();
         }
-        else // Not dashing: Apply custom gravity logic and then normal movement
+        else 
         {
-            if (rb.linearVelocity.y < 0 && !isGrounded) // Player is falling
-            {
-                rb.gravityScale = originalGravityScale * fallGravityMultiplier;
-            }
-            // Player is rising AND jump button is released AND not grounded (for variable jump height)
-            else if (rb.linearVelocity.y > 0 && !jumpAction.IsPressed() && !isGrounded)
-            {
-                rb.gravityScale = originalGravityScale * lowJumpGravityMultiplier;
-            }
-            else // Grounded or normal jump ascent with button held
-            {
-                rb.gravityScale = originalGravityScale;
-            }
+            ApplyGravityModifiers();
+            HandleMovement(); 
+        }
+    }
 
-            HandleMovement(); // Normal movement
+    void ApplyGravityModifiers()
+    {
+         if (rb.linearVelocity.y < 0 && !isGrounded) 
+        {
+            rb.gravityScale = originalGravityScale * fallGravityMultiplier;
+        }
+        else if (rb.linearVelocity.y > 0 && !jumpAction.IsPressed() && !isGrounded)
+        {
+            rb.gravityScale = originalGravityScale * lowJumpGravityMultiplier;
+        }
+        else 
+        {
+            rb.gravityScale = originalGravityScale;
         }
     }
 
     private void PerformGroundCheck()
     {
-        // Perform a boxcast instead of an overlap circle
-        RaycastHit2D hit = Physics2D.BoxCast(groundCheckPoint.position, groundCheckSize, 0f, Vector2.down, 0f, groundLayer);
-        isGrounded = hit.collider != null;
+        if (groundCheckPoint == null) return; 
 
-        // Reset double jump when landing
-        if (!isGrounded)
+        isGrounded = Physics2D.OverlapBox(groundCheckPoint.position, groundCheckSize, 0f, groundLayer);
+
+        if (isGrounded)
         {
-            Debug.Log("in air");
-            return;
+            canDoubleJump = true; // Reset double jump on landing
+        } else {
+             Debug.Log("in air"); // Keep this for debugging if needed
         }
-        canDoubleJump = true;
     }
 
     private void HandleMovement()
     {
-        // Apply horizontal velocity using normal moveSpeed
         rb.linearVelocity = new Vector2(moveDirection * moveSpeed, rb.linearVelocity.y);
-
-        // Flip sprite logic (if you have it)
-        // if (moveDirection > 0 && !isDashing) transform.localScale = new Vector3(1, 1, 1);
-        // else if (moveDirection < 0 && !isDashing) transform.localScale = new Vector3(-1, 1, 1);
+        FlipCheck(); // Call flip check
     }
 
-    private void HandleDashPhysics()
+    private void FlipCheck()
     {
-        currentDashTime += Time.fixedDeltaTime;
-        rb.linearVelocity = dashDirection * dashSpeed; // Maintain dash velocity
-
-        if (currentDashTime >= dashDuration)
+        // Flip sprite based on movement direction
+        if (moveDirection > 0 && !isFacingRight)
         {
-            isDashing = false;
-            rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y); // Stop horizontal movement, maintain vertical if any
-            rb.gravityScale = originalGravityScale; // Restore gravity
+            Flip();
+        }
+        else if (moveDirection < 0 && isFacingRight)
+        {
+            Flip();
         }
     }
 
-    public void OnJump(InputAction.CallbackContext context)
+    private void Flip()
     {
-        if (isGrounded)
-        {
-            rb.linearVelocity = new Vector2(rb.linearVelocity.x, 0f); // Reset vertical velocity before jumping
-            rb.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
-            canDoubleJump = true; // Allow double jump after the first jump
-            Debug.Log("Jumped!");
-        }
-        else if (canDoubleJump)
-        {
-            rb.linearVelocity = new Vector2(rb.linearVelocity.x, 0f); // Reset vertical velocity before double jumping
-            rb.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
-            canDoubleJump = false; // Disable double jump after using it
-            Debug.Log("Double Jumped!");
-        }
-    }
-
-    // Draw the ground check radius in the editor for easier setup
-    void OnDrawGizmosSelected()
-    {
-        if (groundCheckPoint != null)
-        {
-            Gizmos.color = Color.red;
-            // Draw the boxcast as a wire cube
-            Gizmos.matrix = Matrix4x4.TRS(groundCheckPoint.position, Quaternion.identity, Vector3.one);
-            Gizmos.DrawWireCube(Vector3.zero, groundCheckSize);
-        }
+        isFacingRight = !isFacingRight;
+        // Multiply the player's x local scale by -1.
+        Vector3 theScale = transform.localScale;
+        theScale.x *= -1;
+        transform.localScale = theScale;
     }
 
     private void TriggerDash(InputAction.CallbackContext context)
     {
-        if (dashCooldownTimer <= 0 && !isDashing && isGrounded) // Dash only if cooldown ready, not already dashing, and grounded
+        if (dashCooldownTimer <= 0 && !isDashing && isGrounded && playerCollider != null) 
         {
+            // --- Start Ignoring Enemy Collisions ---
+            ignoredEnemyColliders.Clear();
+            Collider2D[] enemiesToIgnore = Physics2D.OverlapCircleAll(transform.position, dashEnemyCheckRadius, enemyLayer);
+
+            foreach (Collider2D enemyCollider in enemiesToIgnore)
+            {
+                if (enemyCollider != playerCollider) // Don't ignore self
+                {
+                    Physics2D.IgnoreCollision(playerCollider, enemyCollider, true);
+                    ignoredEnemyColliders.Add(enemyCollider);
+                }
+            }
+            // --- End Ignoring Enemy Collisions ---
+
             isDashing = true;
             currentDashTime = 0f;
             dashCooldownTimer = dashCooldown;
@@ -263,20 +271,80 @@ public class PlayerMovement : MonoBehaviour
             float horizontalInput = moveAction.ReadValue<Vector2>().x;
             if (Mathf.Approximately(horizontalInput, 0f))
             {
-                // If no horizontal input, dash in the direction the player is visually facing
-                // Assumes positive scale.x is facing right, negative is facing left.
                 dashDirection = new Vector2(Mathf.Sign(transform.localScale.x), 0f);
             }
             else
             {
-                // Dash in the direction of the current horizontal input
                 dashDirection = new Vector2(Mathf.Sign(horizontalInput), 0f);
             }
 
-            // Temporarily disable gravity for a more horizontal dash
-            // originalGravityScale should be stored in Awake()
-            rb.gravityScale = 0f;
-            rb.linearVelocity = dashDirection * dashSpeed; // Initial burst
+            rb.gravityScale = 0f; 
+            rb.linearVelocity = dashDirection * dashSpeed; // Use velocity for direct control during dash
         }
+    }
+
+    private void HandleDashPhysics()
+    {
+        rb.linearVelocity = dashDirection * dashSpeed; // Maintain dash velocity
+        currentDashTime += Time.fixedDeltaTime;
+
+        if (currentDashTime >= dashDuration)
+        {
+            StopDash();
+        }
+    }
+
+    private void StopDash()
+    {
+         // --- Start Re-enabling Enemy Collisions ---
+        if (playerCollider != null)
+        {
+            foreach (Collider2D enemyCollider in ignoredEnemyColliders)
+            {
+                if (enemyCollider != null) 
+                {
+                    Physics2D.IgnoreCollision(playerCollider, enemyCollider, false);
+                }
+            }
+        }
+        ignoredEnemyColliders.Clear();
+        // --- End Re-enabling Enemy Collisions ---
+
+        isDashing = false;
+        rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y); // Stop horizontal movement
+        rb.gravityScale = originalGravityScale; // Restore gravity
+    }
+
+
+    public void OnJump(InputAction.CallbackContext context)
+    {
+        if (isGrounded)
+        {
+            rb.linearVelocity = new Vector2(rb.linearVelocity.x, 0f); // Reset vertical velocity before jumping
+            rb.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
+            canDoubleJump = true; 
+            Debug.Log("Jumped!");
+        }
+        else if (canDoubleJump)
+        {
+            rb.linearVelocity = new Vector2(rb.linearVelocity.x, 0f); // Reset vertical velocity before double jumping
+            rb.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
+            canDoubleJump = false; 
+            Debug.Log("Double Jumped!");
+        }
+    }
+
+    // Draw the ground check radius in the editor for easier setup)
+    void OnDrawGizmosSelected()
+    {
+        if (groundCheckPoint != null)
+        {
+            Gizmos.color = Color.red;
+            Gizmos.DrawWireCube(groundCheckPoint.position, groundCheckSize);
+        }
+
+        // Draw the dash enemy check radius
+        Gizmos.color = Color.blue;
+        Gizmos.DrawWireSphere(transform.position, dashEnemyCheckRadius);
     }
 }
