@@ -7,8 +7,8 @@ public class PlayerAttack : MonoBehaviour
     [SerializeField] private float attackRange = 0.5f;
     [SerializeField] private Vector2 attackSize = new Vector2(0.5f, 0.5f);
     [SerializeField] private Vector2 attackOffset = new Vector2(0.5f, 0f); // Offset from the player's center
-    [SerializeField] private float knockbackForce = 5f;
     [SerializeField] private LayerMask hittableLayer; // Layer for objects that can be hit
+    [SerializeField] private float attackDamage = 10f; // Damage dealt by this attack
 
     private PlayerInput playerInput;
     private InputAction attackAction;
@@ -61,8 +61,8 @@ public class PlayerAttack : MonoBehaviour
                 // Calculate knockback direction
                 Vector2 knockbackDirection = (hitCollider.transform.position - transform.position).normalized;
 
-                // Apply knockback
-                health.TakeKnockback(knockbackDirection, knockbackForce);
+                // Apply damage and knockback using the new method
+                health.ApplyDamageAndKnockback(attackDamage, knockbackDirection);
             }
         }
         Debug.Log("Attack performed! Hit " + hitColliders.Length + " targets.");
