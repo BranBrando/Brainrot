@@ -45,6 +45,9 @@ public class PlayerMovement : MonoBehaviour
     private Vector2 dashDirection;
     private float originalGravityScale;
 
+    public bool IsAttacking { get; set; } // Flag to pause movement during attacks
+
+
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -174,18 +177,18 @@ public class PlayerMovement : MonoBehaviour
     }
 
 
-    void FixedUpdate()
+     void FixedUpdate()
     {
-        PerformGroundCheck(); 
+        PerformGroundCheck();
 
         if (isDashing)
         {
             HandleDashPhysics();
         }
-        else 
+        else if (!IsAttacking)
         {
             ApplyGravityModifiers();
-            HandleMovement(); 
+            HandleMovement();
         }
     }
 

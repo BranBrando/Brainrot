@@ -21,6 +21,7 @@ public class PlayerAttack : MonoBehaviour
     private InputAction attackAction;
     private Animator anim;
     private Rigidbody2D rb;
+    private PlayerMovement playerMovement;
 
     void Awake()
     {
@@ -28,6 +29,8 @@ public class PlayerAttack : MonoBehaviour
         attackAction = playerInput.actions["Player/Attack"]; // Assuming "Player" action map and "Attack" action
         anim = GetComponentInChildren<Animator>(); // Or GetComponent<Animator>()
         rb = GetComponent<Rigidbody2D>();
+        playerMovement = GetComponent<PlayerMovement>();
+
         if (anim == null)
         {
             Debug.LogWarning("PlayerAttack: Animator component not found on Player or its children.");
@@ -35,6 +38,10 @@ public class PlayerAttack : MonoBehaviour
         if (rb == null)
         {
             Debug.LogWarning("PlayerAttack: Rigidbody2D component not found on Player.");
+        }
+        if (playerMovement == null)
+        {
+            Debug.LogWarning("PlayerAttack: PlayerMovement component not found on Player.");
         }
     }
 
@@ -120,8 +127,14 @@ public class PlayerAttack : MonoBehaviour
             Vector2 dashVector = new Vector2(direction * heavyAttackDashForce, 0);
             rb.AddForce(dashVector, heavyAttackDashMode);
             Debug.Log("Dash Executed!");
-
+            if (playerMovement != null) playerMovement.IsAttacking = true;
         }
+    }
+
+    public void FinishHeavyAttack()
+    {
+        if (playerMovement != null) playerMovement.IsAttacking = false;
+        Debug.Log("Heavy attack finished!");
     }
 
     public void ResetAttackTrigger()

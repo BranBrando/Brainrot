@@ -1176,8 +1176,8 @@ MonoBehaviour:
   heavyAttackDamage: 20
   heavyAttackSize: {x: 4, y: 5}
   heavyAttackOffset: {x: 2, y: 0.5}
-  heavyAttackDashForce: 10000
-  heavyAttackDashMode: 0
+  heavyAttackDashForce: 15
+  heavyAttackDashMode: 1
 --- !u!95 &823350004
 Animator:
   serializedVersion: 7
