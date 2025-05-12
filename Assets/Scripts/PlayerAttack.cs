@@ -41,7 +41,10 @@ public class PlayerAttack : MonoBehaviour
         {
             anim.SetTrigger("attack"); // Or SetBool("attack", true); if using a bool
         }
+    }
 
+    public void PerformAttackDamageCheck()
+    {
         // Determine current facing direction for attack offset
         bool isFacingRight = transform.localScale.x > 0;
         Vector2 currentAttackOffset = isFacingRight ? attackOffset : new Vector2(-attackOffset.x, attackOffset.y);

@@ -161,13 +161,14 @@ public class PlayerMovement : MonoBehaviour
     {
         if (anim != null)
         {
-            if (isDashing)
+            anim.SetFloat("speed", Mathf.Abs(rb.linearVelocity.x));
+            if (isGrounded)
             {
-                anim.SetFloat("speed", 0f); // Or trigger a specific dash animation
+                anim.SetBool("isGrounded", true); 
             }
             else
             {
-                anim.SetFloat("speed", Mathf.Abs(rb.linearVelocity.x));
+                anim.SetBool("isGrounded", false); 
             }
         }
     }
