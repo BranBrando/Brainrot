@@ -101,14 +101,14 @@ AnimationClip:
   m_HasMotionFloatCurves: 0
   m_Events:
   - time: 0.76666665
-    functionName: PerformSpinAttackDamageCheck
+    functionName: PerformSpecialAttackDamageCheck
     data: 
     objectReferenceParameter: {fileID: 0}
     floatParameter: 0
     intParameter: 0
     messageOptions: 0
-  - time: 0.9166667
-    functionName: FinishSpinAttack
+  - time: 0.98333335
+    functionName: FinishSpecialAttack
     data: 
     objectReferenceParameter: {fileID: 0}
     floatParameter: 0

@@ -355,6 +355,6 @@ public class PlayerMovement : MonoBehaviour
     public bool CanAttack()
     {
         // Player can attack if they are grounded, not dashing, and not already in an attack animation/state.
-        return isGrounded && !isDashing && !IsAttacking;
+        return !isDashing && !IsAttacking;
     }
 }

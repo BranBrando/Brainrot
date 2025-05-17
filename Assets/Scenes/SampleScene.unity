@@ -889,7 +889,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   moveSpeed: 15
-  jumpForce: 10
+  jumpForce: 15
   fallGravityMultiplier: 5
   lowJumpGravityMultiplier: 5
   dashSpeed: 50
