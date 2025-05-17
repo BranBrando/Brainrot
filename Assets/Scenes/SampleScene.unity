@@ -1170,14 +1170,17 @@ MonoBehaviour:
   hittableLayer:
     serializedVersion: 2
     m_Bits: 64
-  lightAttackDamage: 10
+  lightAttackDamage: 2
   lightAttackSize: {x: 6, y: 2}
   lightAttackOffset: {x: 3, y: 0.5}
-  heavyAttackDamage: 20
+  heavyAttackDamage: 4
   heavyAttackSize: {x: 4, y: 5}
   heavyAttackOffset: {x: 2, y: 0.5}
   heavyAttackDashForce: 15
   heavyAttackDashMode: 1
+  spinAttackDamage: 10
+  spinAttackSize: {x: 7, y: 2}
+  spinAttackOffset: {x: 3, y: 1}
 --- !u!95 &823350004
 Animator:
   serializedVersion: 7

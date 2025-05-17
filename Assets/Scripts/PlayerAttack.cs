@@ -17,8 +17,15 @@ public class PlayerAttack : MonoBehaviour
     [SerializeField] private float heavyAttackDashForce = 15f;
     [SerializeField] private ForceMode2D heavyAttackDashMode = ForceMode2D.Impulse;
 
+    [Header("Spin Attack Parameters")]
+    [SerializeField] private float spinAttackDamage = 15f;
+    [SerializeField] private Vector2 spinAttackSize = new Vector2(0.8f, 0.8f); // Changed from radius to size
+    [SerializeField] private Vector2 spinAttackOffset = new Vector2(0f, 0f);   // Added offset
+    private bool isSpinAttacking = false;
+
     private PlayerInput playerInput;
     private InputAction attackAction;
+    private InputAction spinAttackAction; // Added for spin attack
     private Animator anim;
     private Rigidbody2D rb;
     private PlayerMovement playerMovement;
@@ -26,8 +33,9 @@ public class PlayerAttack : MonoBehaviour
     void Awake()
     {
         playerInput = GetComponent<PlayerInput>();
-        attackAction = playerInput.actions["Player/Attack"]; // Assuming "Player" action map and "Attack" action
-        anim = GetComponentInChildren<Animator>(); // Or GetComponent<Animator>()
+        attackAction = playerInput.actions["Player/Attack"]; 
+        spinAttackAction = playerInput.actions["Player/SpinAttack"]; // Initialize SpinAttack action
+        anim = GetComponentInChildren<Animator>(); 
         rb = GetComponent<Rigidbody2D>();
         playerMovement = GetComponent<PlayerMovement>();
 
@@ -48,43 +56,54 @@ public class PlayerAttack : MonoBehaviour
     void OnEnable()
     {
         attackAction.started += OnAttack;
+        spinAttackAction.started += OnSpinAttack; // Subscribe to SpinAttack
     }
 
     void OnDisable()
     {
         attackAction.started -= OnAttack;
+        spinAttackAction.started -= OnSpinAttack; // Unsubscribe from SpinAttack
     }
 
     private void OnAttack(InputAction.CallbackContext context)
     {
-        if (anim != null)
+        // Basic attack logic, ensure it doesn't conflict with spin attack
+        if (anim != null && !isSpinAttacking && (playerMovement == null || playerMovement.CanAttack()))
         {
-            anim.SetTrigger("attack"); // Or SetBool("attack", true); if using a bool
+            anim.SetTrigger("attack"); 
+        }
+    }
+
+    private void OnSpinAttack(InputAction.CallbackContext context)
+    {
+        // Cooldown check removed
+        if (!isSpinAttacking && (playerMovement == null || playerMovement.CanAttack()))
+        {
+            isSpinAttacking = true;
+            // lastSpinAttackTime = Time.time; // Removed
+            if (anim != null)
+            {
+                anim.SetTrigger("spinAttack");
+            }
+            // Optional: if spin attack should affect movement state
+            // if (playerMovement != null) playerMovement.IsAttacking = true; 
+            Debug.Log("Spin Attack Initiated!");
         }
     }
 
     public void PerformLightAttackDamageCheck()
     {
-        // Determine current facing direction for attack offset
         bool isFacingRight = transform.localScale.x > 0;
         Vector2 currentAttackOffset = isFacingRight ? lightAttackOffset : new Vector2(-lightAttackOffset.x, lightAttackOffset.y);
-
-        // Calculate attack position using the potentially flipped offset
         Vector2 attackPosition = (Vector2)transform.position + currentAttackOffset;
-
-        // Detect all colliders within the attack range
         Collider2D[] hitColliders = Physics2D.OverlapBoxAll(attackPosition, lightAttackSize, 0, hittableLayer);
 
-        // Apply knockback to the hit objects
         foreach (Collider2D hitCollider in hitColliders)
         {
             Health health = hitCollider.GetComponent<Health>();
             if (health != null)
             {
-                // Calculate knockback direction
                 Vector2 knockbackDirection = (hitCollider.transform.position - transform.position).normalized;
-
-                // Apply damage and knockback using the new method
                 health.ApplyDamageAndKnockback(lightAttackDamage, knockbackDirection);
             }
         }
@@ -93,30 +112,41 @@ public class PlayerAttack : MonoBehaviour
 
     public void PerformHeavyAttackDamageCheck()
     {
-        // Determine current facing direction for attack offset
         bool isFacingRight = transform.localScale.x > 0;
         Vector2 currentAttackOffset = isFacingRight ? heavyAttackOffset : new Vector2(-heavyAttackOffset.x, heavyAttackOffset.y);
-
-        // Calculate attack position using the potentially flipped offset
         Vector2 attackPosition = (Vector2)transform.position + currentAttackOffset;
-
-        // Detect all colliders within the attack range
         Collider2D[] hitColliders = Physics2D.OverlapBoxAll(attackPosition, heavyAttackSize, 0, hittableLayer);
 
-        // Apply knockback to the hit objects
         foreach (Collider2D hitCollider in hitColliders)
         {
             Health health = hitCollider.GetComponent<Health>();
             if (health != null)
             {
-                // Calculate knockback direction
                 Vector2 knockbackDirection = (hitCollider.transform.position - transform.position).normalized;
-
-                // Apply damage and knockback using the new method
                 health.ApplyDamageAndKnockback(heavyAttackDamage, knockbackDirection);
             }
         }
         Debug.Log("Heavy Attack performed! Hit " + hitColliders.Length + " targets.");
+    }
+
+    public void PerformSpinAttackDamageCheck()
+    {
+        bool isFacingRight = transform.localScale.x > 0;
+        Vector2 currentAttackOffset = isFacingRight ? spinAttackOffset : new Vector2(-spinAttackOffset.x, spinAttackOffset.y);
+        Vector2 attackPosition = (Vector2)transform.position + currentAttackOffset;
+        Collider2D[] hitColliders = Physics2D.OverlapBoxAll(attackPosition, spinAttackSize, 0, hittableLayer); // Changed to OverlapBoxAll
+
+        foreach (Collider2D hitCollider in hitColliders)
+        {
+            Health health = hitCollider.GetComponent<Health>();
+            if (health != null)
+            {
+                Vector2 knockbackDirection = (hitCollider.transform.position - transform.position).normalized;
+                // Assuming spin attack might have different knockback or just damage
+                health.ApplyDamageAndKnockback(spinAttackDamage, knockbackDirection); 
+            }
+        }
+        Debug.Log("Spin Attack damage check! Hit " + hitColliders.Length + " targets.");
     }
 
     public void ExecuteHeavyAttackDash()
@@ -137,15 +167,22 @@ public class PlayerAttack : MonoBehaviour
         Debug.Log("Heavy attack finished!");
     }
 
+    public void FinishSpinAttack()
+    {
+        isSpinAttacking = false;
+        // Optional: if spin attack affected movement state
+        // if (playerMovement != null) playerMovement.IsAttacking = false;
+        Debug.Log("Spin attack finished!");
+    }
+
     public void ResetAttackTrigger()
     {
         if (anim != null)
         {
-            anim.ResetTrigger("attack"); // Reset the attack trigger
+            anim.ResetTrigger("attack"); 
         }
     }
 
-    // Draw attack area in the editor for easier setup
     void OnDrawGizmosSelected()
     {
         bool isFacingRight = transform.localScale.x > 0;
@@ -161,5 +198,11 @@ public class PlayerAttack : MonoBehaviour
         Vector2 currentHeavyAttackOffset = isFacingRight ? heavyAttackOffset : new Vector2(-heavyAttackOffset.x, heavyAttackOffset.y);
         Vector2 heavyAttackPosition = (Vector2)transform.position + currentHeavyAttackOffset;
         Gizmos.DrawWireCube(heavyAttackPosition, heavyAttackSize);
+
+        // Spin Attack Gizmo
+        Gizmos.color = Color.cyan;
+        Vector2 currentSpinAttackOffset = transform.localScale.x > 0 ? spinAttackOffset : new Vector2(-spinAttackOffset.x, spinAttackOffset.y); // If directional
+        Vector2 spinGizmoPosition = (Vector2)transform.position + currentSpinAttackOffset; // Assuming centered for Gizmo too
+        Gizmos.DrawWireCube(spinGizmoPosition, spinAttackSize); // Changed to DrawWireCube
     }
 }

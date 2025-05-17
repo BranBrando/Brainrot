@@ -351,4 +351,10 @@ public class PlayerMovement : MonoBehaviour
         Gizmos.color = Color.blue;
         Gizmos.DrawWireSphere(transform.position, dashEnemyCheckRadius);
     }
+
+    public bool CanAttack()
+    {
+        // Player can attack if they are grounded, not dashing, and not already in an attack animation/state.
+        return isGrounded && !isDashing && !IsAttacking;
+    }
 }
