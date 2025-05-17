@@ -17,7 +17,7 @@ public class PlayerAttack : MonoBehaviour
     [SerializeField] private float heavyAttackDashForce = 15f;
     [SerializeField] private ForceMode2D heavyAttackDashMode = ForceMode2D.Impulse;
 
-    [Header("Spin Attack Parameters")]
+    [Header("Special Attack Parameters")]
     [SerializeField] private float spinAttackDamage = 15f;
     [SerializeField] private Vector2 spinAttackSize = new Vector2(0.8f, 0.8f); // Changed from radius to size
     [SerializeField] private Vector2 spinAttackOffset = new Vector2(0f, 0f);   // Added offset
@@ -25,7 +25,7 @@ public class PlayerAttack : MonoBehaviour
 
     private PlayerInput playerInput;
     private InputAction attackAction;
-    private InputAction spinAttackAction; // Added for spin attack
+    private InputAction specialAttackAction; // Added for special attack
     private Animator anim;
     private Rigidbody2D rb;
     private PlayerMovement playerMovement;
@@ -33,9 +33,9 @@ public class PlayerAttack : MonoBehaviour
     void Awake()
     {
         playerInput = GetComponent<PlayerInput>();
-        attackAction = playerInput.actions["Player/Attack"]; 
-        spinAttackAction = playerInput.actions["Player/SpinAttack"]; // Initialize SpinAttack action
-        anim = GetComponentInChildren<Animator>(); 
+        attackAction = playerInput.actions["Player/Attack"];
+        specialAttackAction = playerInput.actions["Player/SpecialAttack"]; // Initialize SpecialAttack action
+        anim = GetComponentInChildren<Animator>();
         rb = GetComponent<Rigidbody2D>();
         playerMovement = GetComponent<PlayerMovement>();
 
@@ -56,25 +56,25 @@ public class PlayerAttack : MonoBehaviour
     void OnEnable()
     {
         attackAction.started += OnAttack;
-        spinAttackAction.started += OnSpinAttack; // Subscribe to SpinAttack
+        specialAttackAction.started += OnSpecialAttack; // Subscribe to SpecialAttack
     }
 
     void OnDisable()
     {
         attackAction.started -= OnAttack;
-        spinAttackAction.started -= OnSpinAttack; // Unsubscribe from SpinAttack
+        specialAttackAction.started -= OnSpecialAttack; // Unsubscribe from SpecialAttack
     }
 
     private void OnAttack(InputAction.CallbackContext context)
     {
-        // Basic attack logic, ensure it doesn't conflict with spin attack
+        // Basic attack logic, ensure it doesn't conflict with special attack
         if (anim != null && !isSpinAttacking && (playerMovement == null || playerMovement.CanAttack()))
         {
-            anim.SetTrigger("attack"); 
+            anim.SetTrigger("attack");
         }
     }
 
-    private void OnSpinAttack(InputAction.CallbackContext context)
+    private void OnSpecialAttack(InputAction.CallbackContext context)
     {
         // Cooldown check removed
         if (!isSpinAttacking && (playerMovement == null || playerMovement.CanAttack()))
@@ -85,9 +85,9 @@ public class PlayerAttack : MonoBehaviour
             {
                 anim.SetTrigger("spinAttack");
             }
-            // Optional: if spin attack should affect movement state
-            // if (playerMovement != null) playerMovement.IsAttacking = true; 
-            Debug.Log("Spin Attack Initiated!");
+            // Optional: if special attack should affect movement state
+            // if (playerMovement != null) playerMovement.IsAttacking = true;
+            Debug.Log("Special Attack Initiated!");
         }
     }
 
@@ -129,12 +129,12 @@ public class PlayerAttack : MonoBehaviour
         Debug.Log("Heavy Attack performed! Hit " + hitColliders.Length + " targets.");
     }
 
-    public void PerformSpinAttackDamageCheck()
+    public void PerformSpecialAttackDamageCheck()
     {
         bool isFacingRight = transform.localScale.x > 0;
         Vector2 currentAttackOffset = isFacingRight ? spinAttackOffset : new Vector2(-spinAttackOffset.x, spinAttackOffset.y);
         Vector2 attackPosition = (Vector2)transform.position + currentAttackOffset;
-        Collider2D[] hitColliders = Physics2D.OverlapBoxAll(attackPosition, spinAttackSize, 0, hittableLayer); // Changed to OverlapBoxAll
+        Collider2D[] hitColliders = Physics2D.OverlapBoxAll(attackPosition, spinAttackSize, 0, hittableLayer);
 
         foreach (Collider2D hitCollider in hitColliders)
         {
@@ -142,11 +142,11 @@ public class PlayerAttack : MonoBehaviour
             if (health != null)
             {
                 Vector2 knockbackDirection = (hitCollider.transform.position - transform.position).normalized;
-                // Assuming spin attack might have different knockback or just damage
-                health.ApplyDamageAndKnockback(spinAttackDamage, knockbackDirection); 
+                // Assuming special attack might have different knockback or just damage
+                health.ApplyDamageAndKnockback(spinAttackDamage, knockbackDirection);
             }
         }
-        Debug.Log("Spin Attack damage check! Hit " + hitColliders.Length + " targets.");
+        Debug.Log("Special Attack damage check! Hit " + hitColliders.Length + " targets.");
     }
 
     public void ExecuteHeavyAttackDash()
@@ -167,19 +167,19 @@ public class PlayerAttack : MonoBehaviour
         Debug.Log("Heavy attack finished!");
     }
 
-    public void FinishSpinAttack()
+    public void FinishSpecialAttack()
     {
         isSpinAttacking = false;
-        // Optional: if spin attack affected movement state
+        // Optional: if special attack affected movement state
         // if (playerMovement != null) playerMovement.IsAttacking = false;
-        Debug.Log("Spin attack finished!");
+        Debug.Log("Special attack finished!");
     }
 
     public void ResetAttackTrigger()
     {
         if (anim != null)
         {
-            anim.ResetTrigger("attack"); 
+            anim.ResetTrigger("attack");
         }
     }
 
@@ -199,7 +199,7 @@ public class PlayerAttack : MonoBehaviour
         Vector2 heavyAttackPosition = (Vector2)transform.position + currentHeavyAttackOffset;
         Gizmos.DrawWireCube(heavyAttackPosition, heavyAttackSize);
 
-        // Spin Attack Gizmo
+        // Special Attack Gizmo
         Gizmos.color = Color.cyan;
         Vector2 currentSpinAttackOffset = transform.localScale.x > 0 ? spinAttackOffset : new Vector2(-spinAttackOffset.x, spinAttackOffset.y); // If directional
         Vector2 spinGizmoPosition = (Vector2)transform.position + currentSpinAttackOffset; // Assuming centered for Gizmo too

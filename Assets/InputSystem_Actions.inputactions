@@ -87,7 +87,7 @@
                     "initialStateCheck": false
                 },
                 {
-                    "name": "SpinAttack",
+                    "name": "SpecialAttack",
                     "type": "Button",
                     "id": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
                     "expectedControlType": "Button",
@@ -500,7 +500,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "Keyboard&Mouse",
-                    "action": "SpinAttack",
+                    "action": "SpecialAttack",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }
