@@ -35,6 +35,7 @@ public class PlayerMovement : NetworkBehaviour
     private InputAction dashAction;
     private Animator anim;
     private Collider2D playerCollider;
+    private Health health; // Added reference to Health component
 
     private bool isGrounded;
     private bool canDoubleJump;
@@ -69,6 +70,7 @@ public class PlayerMovement : NetworkBehaviour
         }
         rb = GetComponent<Rigidbody2D>();
         playerInput = gameObject.GetComponent<PlayerInput>();
+        health = GetComponent<Health>(); // Get the Health component
 
         // Ensure the Action Map name matches the one in your Input Actions asset
         moveAction = playerInput.actions["Player/Move"];
@@ -200,15 +202,20 @@ public class PlayerMovement : NetworkBehaviour
         if (!IsOwner) return; // Only process input for the local player
         PerformGroundCheck();
 
+        // Check if the player is being knocked back before allowing movement input
+        bool amIBeingKnockedBack = (health != null && health.IsBeingKnockedBack());
+
         if (isDashing)
         {
             HandleDashPhysics();
         }
-        else if (!IsAttacking)
+        // Only apply player-controlled movement if not attacking AND not being knocked back
+        else if (!IsAttacking && !amIBeingKnockedBack)
         {
             ApplyGravityModifiers();
             HandleMovement();
         }
+        // If amIBeingKnockedBack is true, this script won't interfere with the knockback velocity.
     }
 
     void ApplyGravityModifiers()
@@ -273,6 +280,12 @@ public class PlayerMovement : NetworkBehaviour
 
     private void TriggerDash(InputAction.CallbackContext context)
     {
+        // Prevent dashing if being knocked back
+        if (health != null && health.IsBeingKnockedBack())
+        {
+            return;
+        }
+
         if (dashCooldownTimer <= 0 && !isDashing && isGrounded && playerCollider != null)
         {
             // --- Start Ignoring Enemy Collisions ---
@@ -343,6 +356,12 @@ public class PlayerMovement : NetworkBehaviour
 
     public void OnJump(InputAction.CallbackContext context)
     {
+        // Prevent jumping if being knocked back
+        if (health != null && health.IsBeingKnockedBack())
+        {
+            return;
+        }
+
         if (isGrounded)
         {
             rb.linearVelocity = new Vector2(rb.linearVelocity.x, 0f); // Reset vertical velocity before jumping

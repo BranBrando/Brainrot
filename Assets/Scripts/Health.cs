@@ -1,9 +1,10 @@
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic; // Added for List
+using Unity.Netcode; // Added for networking
 
 [RequireComponent(typeof(Rigidbody2D))]
-public class Health : MonoBehaviour
+public class Health : NetworkBehaviour // Changed to NetworkBehaviour
 {
     public bool isPlayerCharacter = true; // Inspector-settable flag to differentiate behavior
 
@@ -30,6 +31,12 @@ public class Health : MonoBehaviour
     public float collisionLinearDamping = 50f; // High damping when pushing against another character
     private bool isBeingKnockedBack = false;
     private bool inContactWithOtherCharacter = false; // New flag to track contact
+
+    // Public getter for the knockback state
+    public bool IsBeingKnockedBack()
+    {
+        return isBeingKnockedBack;
+    }
 
     void Awake()
     {
