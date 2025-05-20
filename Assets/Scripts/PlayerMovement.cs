@@ -1,10 +1,11 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
-using System.Collections.Generic; // Required for List
+using System.Collections.Generic;
+using Unity.Netcode; // Required for List
 
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(PlayerInput))]
-public class PlayerMovement : MonoBehaviour
+public class PlayerMovement : NetworkBehaviour
 {
     [Header("Movement Settings")]
     [SerializeField] private float moveSpeed = 5f;
@@ -47,17 +48,36 @@ public class PlayerMovement : MonoBehaviour
 
     public bool IsAttacking { get; set; } // Flag to pause movement during attacks
 
-
-    void Awake()
+    public override void OnNetworkSpawn()
     {
+        CameraController camController = FindFirstObjectByType<CameraController>();
+        if (camController != null)
+        {
+            camController.playerTarget = transform; // Assign this player's transform to the camera
+            Debug.Log("PlayerMovement: Assigned local player to CameraController target.");
+        }
+        else
+        {
+            Debug.LogError("PlayerMovement: CameraController not found in scene! Camera will not follow player.");
+        }
+        
+        if (!IsOwner)
+        {
+            // Disable input and movement for non-local players
+            gameObject.GetComponent<PlayerInput>().enabled = false;
+            return;
+        }
         rb = GetComponent<Rigidbody2D>();
-        playerInput = GetComponent<PlayerInput>();
+        playerInput = gameObject.GetComponent<PlayerInput>();
 
         // Ensure the Action Map name matches the one in your Input Actions asset
         moveAction = playerInput.actions["Player/Move"];
         jumpAction = playerInput.actions["Player/Jump"];
         dashAction = playerInput.actions["Player/Dash"]; // Ensure this action exists in your Input Actions asset
         originalGravityScale = rb.gravityScale;
+
+        jumpAction.performed += OnJump;
+        dashAction.performed += TriggerDash;
 
         anim = GetComponentInChildren<Animator>(); // Or GetComponent<Animator>() if it's on the root
         if (anim == null)
@@ -81,20 +101,19 @@ public class PlayerMovement : MonoBehaviour
             Debug.LogError("PlayerMovement: GroundCheckPoint is not assigned in the Inspector!");
         }
     }
-
     void PositionGroundCheck()
     {
         if (playerCollider != null)
         {
             float worldColliderBottomY = playerCollider.bounds.center.y - playerCollider.bounds.extents.y;
             Vector3 worldPointAtColliderBottom = new Vector3(
-                groundCheckPoint.position.x, 
+                groundCheckPoint.position.x,
                 worldColliderBottomY,
                 groundCheckPoint.position.z
             );
             float targetLocalY = transform.InverseTransformPoint(worldPointAtColliderBottom).y + groundCheckYOffset;
             groundCheckPoint.localPosition = new Vector3(
-                groundCheckPoint.localPosition.x, 
+                groundCheckPoint.localPosition.x,
                 targetLocalY,
                 groundCheckPoint.localPosition.z
             );
@@ -103,8 +122,8 @@ public class PlayerMovement : MonoBehaviour
         {
             // Fallback if no collider
             groundCheckPoint.localPosition = new Vector3(
-                groundCheckPoint.localPosition.x, 
-                groundCheckYOffset, 
+                groundCheckPoint.localPosition.x,
+                groundCheckYOffset,
                 groundCheckPoint.localPosition.z
             );
             Debug.LogWarning("PlayerMovement: Collider2D not found. GroundCheckPoint offset from transform pivot.");
@@ -114,8 +133,6 @@ public class PlayerMovement : MonoBehaviour
 
     void OnEnable()
     {
-        jumpAction.performed += OnJump;
-        dashAction.performed += TriggerDash;
     }
 
     void OnDisable()
@@ -125,7 +142,7 @@ public class PlayerMovement : MonoBehaviour
         {
             foreach (Collider2D enemyCollider in ignoredEnemyColliders)
             {
-                if (enemyCollider != null) 
+                if (enemyCollider != null)
                 {
                     Physics2D.IgnoreCollision(playerCollider, enemyCollider, false);
                 }
@@ -139,6 +156,7 @@ public class PlayerMovement : MonoBehaviour
 
     void Update()
     {
+        if (!IsOwner) return; // Only process input for the local player
         HandleInput();
         UpdateCooldowns();
         UpdateAnimator();
@@ -146,7 +164,7 @@ public class PlayerMovement : MonoBehaviour
 
     void HandleInput()
     {
-        if (!isDashing) 
+        if (!isDashing)
         {
             moveDirection = moveAction.ReadValue<Vector2>().x;
         }
@@ -154,7 +172,7 @@ public class PlayerMovement : MonoBehaviour
 
     void UpdateCooldowns()
     {
-         if (dashCooldownTimer > 0)
+        if (dashCooldownTimer > 0)
         {
             dashCooldownTimer -= Time.deltaTime;
         }
@@ -167,18 +185,19 @@ public class PlayerMovement : MonoBehaviour
             anim.SetFloat("speed", Mathf.Abs(rb.linearVelocity.x));
             if (isGrounded)
             {
-                anim.SetBool("isGrounded", true); 
+                anim.SetBool("isGrounded", true);
             }
             else
             {
-                anim.SetBool("isGrounded", false); 
+                anim.SetBool("isGrounded", false);
             }
         }
     }
 
 
-     void FixedUpdate()
+    void FixedUpdate()
     {
+        if (!IsOwner) return; // Only process input for the local player
         PerformGroundCheck();
 
         if (isDashing)
@@ -194,7 +213,7 @@ public class PlayerMovement : MonoBehaviour
 
     void ApplyGravityModifiers()
     {
-         if (rb.linearVelocity.y < 0 && !isGrounded) 
+        if (rb.linearVelocity.y < 0 && !isGrounded)
         {
             rb.gravityScale = originalGravityScale * fallGravityMultiplier;
         }
@@ -202,7 +221,7 @@ public class PlayerMovement : MonoBehaviour
         {
             rb.gravityScale = originalGravityScale * lowJumpGravityMultiplier;
         }
-        else 
+        else
         {
             rb.gravityScale = originalGravityScale;
         }
@@ -210,15 +229,17 @@ public class PlayerMovement : MonoBehaviour
 
     private void PerformGroundCheck()
     {
-        if (groundCheckPoint == null) return; 
+        if (groundCheckPoint == null) return;
 
         isGrounded = Physics2D.OverlapBox(groundCheckPoint.position, groundCheckSize, 0f, groundLayer);
 
         if (isGrounded)
         {
             canDoubleJump = true; // Reset double jump on landing
-        } else {
-             Debug.Log("in air"); // Keep this for debugging if needed
+        }
+        else
+        {
+            Debug.Log("in air"); // Keep this for debugging if needed
         }
     }
 
@@ -252,7 +273,7 @@ public class PlayerMovement : MonoBehaviour
 
     private void TriggerDash(InputAction.CallbackContext context)
     {
-        if (dashCooldownTimer <= 0 && !isDashing && isGrounded && playerCollider != null) 
+        if (dashCooldownTimer <= 0 && !isDashing && isGrounded && playerCollider != null)
         {
             // --- Start Ignoring Enemy Collisions ---
             ignoredEnemyColliders.Clear();
@@ -282,7 +303,7 @@ public class PlayerMovement : MonoBehaviour
                 dashDirection = new Vector2(Mathf.Sign(horizontalInput), 0f);
             }
 
-            rb.gravityScale = 0f; 
+            rb.gravityScale = 0f;
             rb.linearVelocity = dashDirection * dashSpeed; // Use velocity for direct control during dash
         }
     }
@@ -300,12 +321,12 @@ public class PlayerMovement : MonoBehaviour
 
     private void StopDash()
     {
-         // --- Start Re-enabling Enemy Collisions ---
+        // --- Start Re-enabling Enemy Collisions ---
         if (playerCollider != null)
         {
             foreach (Collider2D enemyCollider in ignoredEnemyColliders)
             {
-                if (enemyCollider != null) 
+                if (enemyCollider != null)
                 {
                     Physics2D.IgnoreCollision(playerCollider, enemyCollider, false);
                 }
@@ -326,14 +347,14 @@ public class PlayerMovement : MonoBehaviour
         {
             rb.linearVelocity = new Vector2(rb.linearVelocity.x, 0f); // Reset vertical velocity before jumping
             rb.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
-            canDoubleJump = true; 
+            canDoubleJump = true;
             Debug.Log("Jumped!");
         }
         else if (canDoubleJump)
         {
             rb.linearVelocity = new Vector2(rb.linearVelocity.x, 0f); // Reset vertical velocity before double jumping
             rb.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
-            canDoubleJump = false; 
+            canDoubleJump = false;
             Debug.Log("Double Jumped!");
         }
     }

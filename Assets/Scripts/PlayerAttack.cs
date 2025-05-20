@@ -1,7 +1,8 @@
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-public class PlayerAttack : MonoBehaviour
+public class PlayerAttack : NetworkBehaviour
 {
     [SerializeField] private LayerMask hittableLayer; // Layer for objects that can be hit
 
@@ -32,12 +33,25 @@ public class PlayerAttack : MonoBehaviour
 
     void Awake()
     {
-        playerInput = GetComponent<PlayerInput>();
+    }
+
+    public override void OnNetworkSpawn()
+    {
+        if (!IsOwner)
+        {
+            // Disable input and movement for non-local players
+            gameObject.GetComponent<PlayerInput>().enabled = false;
+            return;
+        }
+        playerInput = gameObject.GetComponent<PlayerInput>();
         attackAction = playerInput.actions["Player/Attack"];
         specialAttackAction = playerInput.actions["Player/SpecialAttack"]; // Initialize SpecialAttack action
         anim = GetComponentInChildren<Animator>();
         rb = GetComponent<Rigidbody2D>();
         playerMovement = GetComponent<PlayerMovement>();
+
+        attackAction.started += OnAttack;
+        specialAttackAction.started += OnSpecialAttack; // Subscribe to SpecialAttack
 
         if (anim == null)
         {
@@ -55,8 +69,6 @@ public class PlayerAttack : MonoBehaviour
 
     void OnEnable()
     {
-        attackAction.started += OnAttack;
-        specialAttackAction.started += OnSpecialAttack; // Subscribe to SpecialAttack
     }
 
     void OnDisable()
@@ -100,6 +112,10 @@ public class PlayerAttack : MonoBehaviour
 
         foreach (Collider2D hitCollider in hitColliders)
         {
+            if (hitCollider.CompareTag("Player") && hitCollider.gameObject == gameObject)
+            {
+                continue; // Skip self-hit
+            }
             Health health = hitCollider.GetComponent<Health>();
             if (health != null)
             {
@@ -119,6 +135,10 @@ public class PlayerAttack : MonoBehaviour
 
         foreach (Collider2D hitCollider in hitColliders)
         {
+            if (hitCollider.CompareTag("Player") && hitCollider.gameObject == gameObject)
+            {
+                continue; // Skip self-hit
+            }
             Health health = hitCollider.GetComponent<Health>();
             if (health != null)
             {
@@ -138,6 +158,10 @@ public class PlayerAttack : MonoBehaviour
 
         foreach (Collider2D hitCollider in hitColliders)
         {
+            if (hitCollider.CompareTag("Player") && hitCollider.gameObject == gameObject)
+            {
+                continue; // Skip self-hit
+            }
             Health health = hitCollider.GetComponent<Health>();
             if (health != null)
             {

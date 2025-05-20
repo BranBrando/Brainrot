@@ -33,11 +33,6 @@ public class CameraController : MonoBehaviour
         {
             Debug.LogError("CameraController: No Camera component found on this GameObject.");
         }
-
-        if (playerTarget == null)
-        {
-            Debug.LogError("CameraController: playerTarget is not assigned.  Please assign in the inspector.");
-        }
     }
 
     private void LateUpdate()
