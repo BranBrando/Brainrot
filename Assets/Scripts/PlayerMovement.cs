@@ -54,19 +54,26 @@ public class PlayerMovement : NetworkBehaviour
         CameraController camController = FindFirstObjectByType<CameraController>();
         if (camController != null)
         {
-            camController.playerTarget = transform; // Assign this player's transform to the camera
-            Debug.Log("PlayerMovement: Assigned local player to CameraController target.");
+            if (IsOwner)
+            {
+                camController.playerTarget = transform; // Assign this player's transform to the camera
+                Debug.Log("PlayerMovement: Assigned local player to CameraController target.");
+
+            }
+            else
+            {
+                camController.enemyTargets.Add(transform); // Add this player to the camera's enemy targets
+            }
         }
         else
         {
             Debug.LogError("PlayerMovement: CameraController not found in scene! Camera will not follow player.");
         }
-        
+
         if (!IsOwner)
         {
             // Disable input and movement for non-local players
             gameObject.GetComponent<PlayerInput>().enabled = false;
-            camController.enemyTargets.Add(transform); // Add this player to the camera's enemy targets
             return;
         }
         playerInput = gameObject.GetComponent<PlayerInput>();
