@@ -66,10 +66,11 @@ public class PlayerMovement : NetworkBehaviour
         {
             // Disable input and movement for non-local players
             gameObject.GetComponent<PlayerInput>().enabled = false;
+            camController.enemyTargets.Add(transform); // Add this player to the camera's enemy targets
             return;
         }
-        rb = GetComponent<Rigidbody2D>();
         playerInput = gameObject.GetComponent<PlayerInput>();
+        rb = GetComponent<Rigidbody2D>();
         health = GetComponent<Health>(); // Get the Health component
 
         // Ensure the Action Map name matches the one in your Input Actions asset
@@ -133,28 +134,30 @@ public class PlayerMovement : NetworkBehaviour
     }
 
 
-    void OnEnable()
-    {
-    }
+    // void OnEnable()
+    // {
+    //     jumpAction.performed += OnJump;
+    //     dashAction.performed += TriggerDash;
+    // }
 
-    void OnDisable()
-    {
-        // Ensure collisions are re-enabled if disabled during dash
-        if (playerCollider != null)
-        {
-            foreach (Collider2D enemyCollider in ignoredEnemyColliders)
-            {
-                if (enemyCollider != null)
-                {
-                    Physics2D.IgnoreCollision(playerCollider, enemyCollider, false);
-                }
-            }
-        }
-        ignoredEnemyColliders.Clear();
+    // void OnDisable()
+    // {
+    //     // Ensure collisions are re-enabled if disabled during dash
+    //     if (playerCollider != null)
+    //     {
+    //         foreach (Collider2D enemyCollider in ignoredEnemyColliders)
+    //         {
+    //             if (enemyCollider != null)
+    //             {
+    //                 Physics2D.IgnoreCollision(playerCollider, enemyCollider, false);
+    //             }
+    //         }
+    //     }
+    //     ignoredEnemyColliders.Clear();
 
-        jumpAction.performed -= OnJump;
-        dashAction.performed -= TriggerDash;
-    }
+    //     jumpAction.performed -= OnJump;
+    //     dashAction.performed -= TriggerDash;
+    // }
 
     void Update()
     {
@@ -213,7 +216,10 @@ public class PlayerMovement : NetworkBehaviour
         else if (!IsAttacking && !amIBeingKnockedBack)
         {
             ApplyGravityModifiers();
-            HandleMovement();
+            if (isGrounded)
+            {
+                HandleMovement();
+            }
         }
         // If amIBeingKnockedBack is true, this script won't interfere with the knockback velocity.
     }

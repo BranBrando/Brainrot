@@ -67,15 +67,17 @@ public class PlayerAttack : NetworkBehaviour
         }
     }
 
-    void OnEnable()
-    {
-    }
+    // void OnEnable()
+    // {
+    //     attackAction.started += OnAttack;
+    //     specialAttackAction.started += OnSpecialAttack; // Subscribe to SpecialAttack
+    // }
 
-    void OnDisable()
-    {
-        attackAction.started -= OnAttack;
-        specialAttackAction.started -= OnSpecialAttack; // Unsubscribe from SpecialAttack
-    }
+    // void OnDisable()
+    // {
+    //     attackAction.started -= OnAttack;
+    //     specialAttackAction.started -= OnSpecialAttack; // Unsubscribe from SpecialAttack
+    // }
 
     private void OnAttack(InputAction.CallbackContext context)
     {
