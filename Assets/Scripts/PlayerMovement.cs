@@ -46,8 +46,6 @@ public class PlayerMovement : NetworkBehaviour
     private float dashCooldownTimer;
     private Vector2 dashDirection;
     private float originalGravityScale;
-    private int playerLayerId; // Added for player layer ID
-
     public bool IsAttacking { get; set; } // Flag to pause movement during attacks
 
     public override void OnNetworkSpawn()
@@ -80,13 +78,6 @@ public class PlayerMovement : NetworkBehaviour
         playerInput = gameObject.GetComponent<PlayerInput>();
         rb = GetComponent<Rigidbody2D>();
         health = GetComponent<Health>(); // Get the Health component
-
-        // Get the player layer ID
-        playerLayerId = LayerMask.NameToLayer("Player");
-        if (playerLayerId == -1)
-        {
-            Debug.LogError("PlayerMovement: 'Player' layer not found! Physics ignoring will not work.");
-        }
 
         // Ensure the Action Map name matches the one in your Input Actions asset
         moveAction = playerInput.actions["Player/Move"];
@@ -329,29 +320,8 @@ public class PlayerMovement : NetworkBehaviour
             // --- Call Server RPC to ignore player-to-player collisions ---
             if (IsOwner) // Only the owner client should call the ServerRpc
             {
-                TriggerDashServerRpc(playerLayerId);
+                TriggerDashServerRpc();
             }
-            // --- Start Ignoring Enemy Collisions (Client-side for non-player enemies) ---
-            IgnoreCollision();
-            // --- End Ignoring Enemy Collisions ---
-
-            isDashing = true;
-            currentDashTime = 0f;
-            dashCooldownTimer = dashCooldown;
-
-            float horizontalInput = moveAction.ReadValue<Vector2>().x;
-            if (Mathf.Approximately(horizontalInput, 0f))
-            {
-                dashDirection = new Vector2(Mathf.Sign(transform.localScale.x), 0f);
-            }
-            else
-            {
-                dashDirection = new Vector2(Mathf.Sign(horizontalInput), 0f);
-            }
-
-            rb.gravityScale = 0f;
-            rb.linearVelocity = dashDirection * dashSpeed; // Use velocity for direct control during dash
-
         }
     }
 
@@ -387,7 +357,7 @@ public class PlayerMovement : NetworkBehaviour
         // --- Call Server RPC to re-enable player-to-player collisions ---
         if (IsOwner) // Only the owner client should call the ServerRpc
         {
-            StopDashServerRpc(playerLayerId);
+            StopDashServerRpc();
         }
         // --- Start Re-enabling Enemy Collisions (Client-side for non-player enemies) ---
         ResetCollision();
@@ -401,40 +371,68 @@ public class PlayerMovement : NetworkBehaviour
 
     // Server RPC to ignore player-to-player collisions during dash
     [ServerRpc]
-    private void TriggerDashServerRpc(int pLayerId, ServerRpcParams rpcParams = default)
+    private void TriggerDashServerRpc(ServerRpcParams rpcParams = default)
     {
         if (!IsServer) return;
         ulong dashingPlayerId = rpcParams.Receive.SenderClientId;
-        Debug.Log($"Server: Player {dashingPlayerId} started dash.");
+        int pLayerId = LayerMask.NameToLayer("Player");
+        Debug.Log($"Server: Player {dashingPlayerId} started dash. Ignoring collisions on layer {pLayerId}.");
         Physics2D.IgnoreLayerCollision(pLayerId, pLayerId, true); // Removed: We want collisions to happen for pushing
-        TriggerDashClientRpc(playerLayerId, dashingPlayerId);
+        TriggerDashClientRpc(dashingPlayerId);
     }
 
     [ClientRpc]
-    private void TriggerDashClientRpc(int pLayerId, ulong dashingPlayerId, ClientRpcParams rpcParams = default)
+    private void TriggerDashClientRpc(ulong dashingPlayerId, ClientRpcParams rpcParams = default)
     {
         if (!IsClient) return;
         // IgnoreCollision(); // This ignores non-player enemies, keep this client-side
-        Debug.Log($"Client: Player {dashingPlayerId} started dash.");
+        int pLayerId = LayerMask.NameToLayer("Player");
+        Debug.Log($"Client: Player {dashingPlayerId} started dash. Ignoring collisions on layer {pLayerId}.");
         Physics2D.IgnoreLayerCollision(pLayerId, pLayerId, true);
+        if (dashingPlayerId == NetworkManager.Singleton.LocalClientId)
+        {
+            // --- Start Ignoring Enemy Collisions (Client-side for non-player enemies) ---
+            IgnoreCollision();
+            // --- End Ignoring Enemy Collisions ---
+
+            isDashing = true;
+            currentDashTime = 0f;
+            dashCooldownTimer = dashCooldown;
+
+            float horizontalInput = moveAction.ReadValue<Vector2>().x;
+            if (Mathf.Approximately(horizontalInput, 0f))
+            {
+                dashDirection = new Vector2(Mathf.Sign(transform.localScale.x), 0f);
+            }
+            else
+            {
+                dashDirection = new Vector2(Mathf.Sign(horizontalInput), 0f);
+            }
+
+            rb.gravityScale = 0f;
+            rb.linearVelocity = dashDirection * dashSpeed; // Use velocity for direct control during dash
+
+        }
     }
 
     // Server RPC to re-enable player-to-player collisions after dash
     [ServerRpc]
-    private void StopDashServerRpc(int pLayerId, ServerRpcParams rpcParams = default)
+    private void StopDashServerRpc(ServerRpcParams rpcParams = default)
     {
         if (!IsServer) return;
         ulong dashingPlayerId = rpcParams.Receive.SenderClientId;
+        int pLayerId = LayerMask.NameToLayer("Player");
         Debug.Log($"Server: Player {dashingPlayerId} stopped dash.");
         Physics2D.IgnoreLayerCollision(pLayerId, pLayerId, false);
-        StopDashClientRpc(playerLayerId, dashingPlayerId);
+        StopDashClientRpc(dashingPlayerId);
     }
 
     [ClientRpc]
-    private void StopDashClientRpc(int pLayerId, ulong dashingPlayerId, ClientRpcParams rpcParams = default)
+    private void StopDashClientRpc(ulong dashingPlayerId, ClientRpcParams rpcParams = default)
     {
         if (!IsClient) return;
         // ResetCollision();
+        int pLayerId = LayerMask.NameToLayer("Player");
         Debug.Log($"Client: Player {dashingPlayerId} stopped dash.");
         Physics2D.IgnoreLayerCollision(pLayerId, pLayerId, false);
     }

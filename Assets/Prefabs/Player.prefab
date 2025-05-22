@@ -401,7 +401,7 @@ MonoBehaviour:
   knockoutProbabilityPerDamagePercent: 0.005
   gameManager: {fileID: 0}
   normalLinearDamping: 1
-  collisionLinearDamping: 50
+  collisionLinearDamping: 3
 --- !u!114 &-8958732009386127254
 MonoBehaviour:
   m_ObjectHideFlags: 0
