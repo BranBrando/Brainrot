@@ -1,7 +1,8 @@
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic; // Added for List
-using Unity.Netcode; // Added for networking
+using Unity.Netcode;
+using Unity.VisualScripting; // Added for networking
 
 [RequireComponent(typeof(Rigidbody2D))]
 public class Health : NetworkBehaviour // Changed to NetworkBehaviour
