@@ -139,8 +139,13 @@ public class Health : NetworkBehaviour // Changed to NetworkBehaviour
         {
             if (stocks > 0)
             {
-                gameManager.RequestRespawn(this);
-                gameObject.SetActive(false); // Temporarily deactivate
+                // Request respawn from the server
+                if (IsOwner) // Only the owner client should request respawn for its own character
+                {
+                    RequestRespawnServerRpc();
+                }
+                // The object will be set inactive by the server via the ServerRpc,
+                // or by the client via the ClientRpc if it's the owner.
             }
             else
             {
@@ -148,14 +153,38 @@ public class Health : NetworkBehaviour // Changed to NetworkBehaviour
                 // GameManager will handle deactivation or other game over logic
             }
         }
-        else // No GameManager, just deactivate
+        else // No GameManager, just deactivate (for non-networked scenarios or testing)
         {
             gameObject.SetActive(false);
         }
     }
 
-    // New method for respawning (called by GameManager)
-    public void RespawnAt(Vector3 position) // Removed startingStocksForRespawn param as Health manages its own stocks decrement
+    [ServerRpc(RequireOwnership = true)]
+    void RequestRespawnServerRpc(ServerRpcParams rpcParams = default)
+    {
+        // This code runs ONLY on the SERVER
+        if (GameManager.Instance != null)
+        {
+            Vector3 respawnPos = GameManager.Instance.GetRandomRespawnPoint(); // Server picks the point
+
+            // Deactivate on server first, so it's hidden for all clients
+            gameObject.SetActive(false);
+
+            // Tell the specific client (owner of this NetworkObject) to respawn.
+            RespawnClientRpc(respawnPos);
+        }
+    }
+
+    [ClientRpc]
+    void RespawnClientRpc(Vector3 respawnPosition, ClientRpcParams clientRpcParams = default)
+    {
+        // This code runs on the client that owns this Health component
+        // The object should already be inactive due to the server call.
+        RespawnAt(respawnPosition); // Use the existing method to move and reset state
+    }
+
+    // New method for respawning (called by GameManager or RespawnClientRpc)
+    public void RespawnAt(Vector3 position)
     {
         transform.position = position;
         currentDamagePercentage = 0f;

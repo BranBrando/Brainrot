@@ -326,6 +326,11 @@ public class PlayerMovement : NetworkBehaviour
 
         if (dashCooldownTimer <= 0 && !isDashing && isGrounded && playerCollider != null)
         {
+            // --- Call Server RPC to ignore player-to-player collisions ---
+            if (IsOwner) // Only the owner client should call the ServerRpc
+            {
+                TriggerDashServerRpc(playerLayerId);
+            }
             // --- Start Ignoring Enemy Collisions (Client-side for non-player enemies) ---
             IgnoreCollision();
             // --- End Ignoring Enemy Collisions ---
@@ -347,11 +352,6 @@ public class PlayerMovement : NetworkBehaviour
             rb.gravityScale = 0f;
             rb.linearVelocity = dashDirection * dashSpeed; // Use velocity for direct control during dash
 
-            // --- Call Server RPC to ignore player-to-player collisions ---
-            if (IsOwner) // Only the owner client should call the ServerRpc
-            {
-                TriggerDashServerRpc(playerLayerId);
-            }
         }
     }
 
@@ -384,6 +384,11 @@ public class PlayerMovement : NetworkBehaviour
 
     private void StopDash()
     {
+        // --- Call Server RPC to re-enable player-to-player collisions ---
+        if (IsOwner) // Only the owner client should call the ServerRpc
+        {
+            StopDashServerRpc(playerLayerId);
+        }
         // --- Start Re-enabling Enemy Collisions (Client-side for non-player enemies) ---
         ResetCollision();
         // --- End Re-enabling Enemy Collisions ---
@@ -392,11 +397,6 @@ public class PlayerMovement : NetworkBehaviour
         rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y); // Stop horizontal movement
         rb.gravityScale = originalGravityScale; // Restore gravity
 
-        // --- Call Server RPC to re-enable player-to-player collisions ---
-        if (IsOwner) // Only the owner client should call the ServerRpc
-        {
-            StopDashServerRpc(playerLayerId);
-        }
     }
 
     // Server RPC to ignore player-to-player collisions during dash
