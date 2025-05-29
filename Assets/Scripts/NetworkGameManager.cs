@@ -4,28 +4,23 @@ using UnityEngine.UI; // Assuming you'll use Unity UI
 
 public class NetworkGameManager : MonoBehaviour
 {
-    [Header("UI References")]
-    [SerializeField] private Button hostButton;
-    [SerializeField] private Button clientButton;
-    [SerializeField] private Button serverButton; // Optional: for dedicated server
+    public static NetworkGameManager Singleton { get; private set; }
 
-    void Awake()
+    private void Awake()
     {
-        // Subscribe UI buttons to network actions
-        if (hostButton != null)
+        if (Singleton != null && Singleton != this)
         {
-            hostButton.onClick.AddListener(() => NetworkManager.Singleton.StartHost());
+            Destroy(gameObject);
         }
-        if (clientButton != null)
+        else
         {
-            clientButton.onClick.AddListener(() => NetworkManager.Singleton.StartClient());
+            Singleton = this;
+            DontDestroyOnLoad(gameObject);
         }
-        if (serverButton != null)
-        {
-            serverButton.onClick.AddListener(() => NetworkManager.Singleton.StartServer());
-        }
-
     }
+
+    // No longer directly using UI buttons here for starting host/client
+    // These actions will be triggered by LobbyManager after Relay setup.
 
     void Start()
     {
@@ -35,31 +30,23 @@ public class NetworkGameManager : MonoBehaviour
             Debug.LogError("NetworkGameManager: NetworkManager.Singleton not found in the scene. Please add one.");
             return;
         }
-
-        // Optional: Hide buttons after connection starts
-        NetworkManager.Singleton.OnClientStarted += HideConnectionButtons;
-        NetworkManager.Singleton.OnServerStarted += HideConnectionButtons;
     }
 
-    void OnDestroy()
+    public void StartRelayHost()
     {
-        // Unsubscribe to prevent memory leaks
-        if (NetworkManager.Singleton != null)
-        {
-            NetworkManager.Singleton.OnClientStarted -= HideConnectionButtons;
-            NetworkManager.Singleton.OnServerStarted -= HideConnectionButtons;
-        }
+        NetworkManager.Singleton.StartHost();
+        Debug.Log("NetworkManager started as Host via Relay.");
     }
 
-    private void HideConnectionButtons()
+    public void StartRelayClient()
     {
-        if (hostButton != null) hostButton.gameObject.SetActive(false);
-        if (clientButton != null) clientButton.gameObject.SetActive(false);
-        if (serverButton != null) serverButton.gameObject.SetActive(false);
+        NetworkManager.Singleton.StartClient();
+        Debug.Log("NetworkManager started as Client via Relay.");
     }
-    // You might add more UI elements and methods here for:
-    // - Displaying connection status
-    // - Inputting IP addresses for direct connect (requires a different transport)
-    // - Handling disconnects
-    // - Displaying player list, etc.
+
+    public void StartRelayServer()
+    {
+        NetworkManager.Singleton.StartServer();
+        Debug.Log("NetworkManager started as Server via Relay.");
+    }
 }

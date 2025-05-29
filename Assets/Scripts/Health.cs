@@ -54,18 +54,20 @@ public class Health : NetworkBehaviour // Changed to NetworkBehaviour
 
     void Start()
     {
-        if (gameManager == null)
-        {
-            gameManager = FindFirstObjectByType<GameManager>();
-        }
+        // Always try to get the GameManager via its singleton Instance.
+        // This is more reliable than FindFirstObjectByType, especially for timing issues.
+        GameManager gmInstance = GameManager.Instance;
 
-        if (gameManager != null)
+        if (gmInstance != null)
         {
-            gameManager.RegisterEntity(this); // All entities with Health register
+            this.gameManager = gmInstance; // Assign to the local field if you keep it.
+            gmInstance.RegisterEntity(this); // Register with the instance.
         }
         else
         {
-            Debug.LogWarning("GameManager not found in scene for " + gameObject.name);
+            // This warning will now only appear if GameManager.Instance itself is null,
+            // which would mean the GameManager object isn't in the scene or its Awake() hasn't run.
+            Debug.LogWarning("GameManager.Instance is null. Cannot register entity: " + gameObject.name);
         }
     }
 

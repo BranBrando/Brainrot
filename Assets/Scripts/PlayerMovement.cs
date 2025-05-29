@@ -50,23 +50,28 @@ public class PlayerMovement : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
-        CameraController camController = FindFirstObjectByType<CameraController>();
+        CameraController camController = CameraController.Instance; // Use the singleton instance
+
         if (camController != null)
         {
             if (IsOwner)
             {
                 camController.playerTarget = transform; // Assign this player's transform to the camera
-                Debug.Log("PlayerMovement: Assigned local player to CameraController target.");
-
+                Debug.Log("PlayerMovement: Assigned local player to CameraController.Instance target.");
             }
             else
             {
+                // Ensure enemyTargets list exists before trying to add to it
+                if (camController.enemyTargets == null)
+                {
+                    camController.enemyTargets = new List<Transform>(); // Initialize if null
+                }
                 camController.enemyTargets.Add(transform); // Add this player to the camera's enemy targets
             }
         }
         else
         {
-            Debug.LogError("PlayerMovement: CameraController not found in scene! Camera will not follow player.");
+            Debug.LogError("PlayerMovement: CameraController.Instance is null! Camera will not follow player. Ensure a CameraController is active in the scene.");
         }
 
         if (!IsOwner)
