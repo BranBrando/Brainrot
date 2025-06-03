@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic; // Added for List
 using Unity.Netcode;
 using Unity.VisualScripting; // Added for networking
+// using Brainrot.Player; // Removed as PlayerBuffManager is now in global namespace
 
 [RequireComponent(typeof(Rigidbody2D))]
 public class Health : NetworkBehaviour // Changed to NetworkBehaviour
@@ -26,6 +27,7 @@ public class Health : NetworkBehaviour // Changed to NetworkBehaviour
     [Header("References")]
     public GameManager gameManager;
     private Rigidbody2D rb;
+    private PlayerBuffManager _buffManager; // Now in global namespace
 
     [Header("Damping Settings")]
     public float normalLinearDamping = 1f; // Set this to your desired default in Inspector
@@ -49,6 +51,12 @@ public class Health : NetworkBehaviour // Changed to NetworkBehaviour
         else
         {
              Debug.LogError("Rigidbody2D not found on " + gameObject.name);
+        }
+        _buffManager = GetComponent<PlayerBuffManager>();
+        if (_buffManager == null)
+        {
+            // This might be okay if non-player entities with Health don't have buffs
+            // Debug.LogWarning("Health: PlayerBuffManager component not found on " + gameObject.name);
         }
     }
 
@@ -74,7 +82,12 @@ public class Health : NetworkBehaviour // Changed to NetworkBehaviour
     // Updated to handle damage and determine knockback/knockout force probabilistically
     public void ApplyDamageAndKnockback(float damageAmount, Vector2 knockbackDirection) // Removed baseKnockbackForce parameter
     {
-        currentDamagePercentage += damageAmount;
+        float actualDamage = damageAmount;
+        if (_buffManager != null)
+        {
+            actualDamage *= _buffManager.DamageTakenMultiplier.Value;
+        }
+        currentDamagePercentage += actualDamage;
 
         // Calculate knockout probability based on damage percentage
         float knockoutChance = knockoutProbabilityBase + (currentDamagePercentage * knockoutProbabilityPerDamagePercent);

@@ -36,6 +36,7 @@ public class PlayerMovement : NetworkBehaviour
     private Animator anim;
     private Collider2D playerCollider;
     private Health health; // Added reference to Health component
+    private PlayerBuffManager _buffManager; // Now in global namespace
 
     private bool isGrounded;
     private bool canDoubleJump;
@@ -115,6 +116,7 @@ public class PlayerMovement : NetworkBehaviour
             Debug.LogError("PlayerMovement: GroundCheckPoint is not assigned in the Inspector!");
         }
     }
+
     void PositionGroundCheck()
     {
         if (playerCollider != null)
@@ -269,7 +271,12 @@ public class PlayerMovement : NetworkBehaviour
 
     private void HandleMovement()
     {
-        rb.linearVelocity = new Vector2(moveDirection * moveSpeed, rb.linearVelocity.y);
+        float currentMoveSpeed = moveSpeed;
+        if (_buffManager != null)
+        {
+            currentMoveSpeed *= _buffManager.SpeedMultiplier.Value;
+        }
+        rb.linearVelocity = new Vector2(moveDirection * currentMoveSpeed, rb.linearVelocity.y);
         FlipCheck(); // Call flip check
     }
 
@@ -315,10 +322,18 @@ public class PlayerMovement : NetworkBehaviour
 
     private void HandleDashPhysics()
     {
-        rb.linearVelocity = dashDirection * dashSpeed; // Maintain dash velocity
+        float currentDashSpeed = dashSpeed;
+        float currentActualDashDuration = dashDuration; // Renamed to avoid conflict with field
+        if (_buffManager != null)
+        {
+            currentDashSpeed *= _buffManager.DashSpeedMultiplier.Value;
+            currentActualDashDuration *= _buffManager.DashDurationMultiplier.Value;
+        }
+
+        rb.linearVelocity = dashDirection * currentDashSpeed; // Maintain dash velocity
         currentDashTime += Time.fixedDeltaTime;
 
-        if (currentDashTime >= dashDuration)
+        if (currentDashTime >= currentActualDashDuration)
         {
             StopDash();
         }
@@ -370,7 +385,12 @@ public class PlayerMovement : NetworkBehaviour
             }
 
             rb.gravityScale = 0f;
-            rb.linearVelocity = dashDirection * dashSpeed; // Use velocity for direct control during dash
+            float currentDashSpeed = dashSpeed;
+            if (_buffManager != null)
+            {
+                currentDashSpeed *= _buffManager.DashSpeedMultiplier.Value;
+            }
+            rb.linearVelocity = dashDirection * currentDashSpeed; // Use velocity for direct control during dash
 
         }
     }
@@ -403,15 +423,25 @@ public class PlayerMovement : NetworkBehaviour
 
         if (isGrounded)
         {
+            float currentJumpForce = jumpForce;
+            if (_buffManager != null)
+            {
+                currentJumpForce *= _buffManager.JumpForceMultiplier.Value;
+            }
             rb.linearVelocity = new Vector2(rb.linearVelocity.x, 0f); // Reset vertical velocity before jumping
-            rb.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
+            rb.AddForce(Vector2.up * currentJumpForce, ForceMode2D.Impulse);
             canDoubleJump = true;
             Debug.Log("Jumped!");
         }
         else if (canDoubleJump)
         {
+            float currentJumpForce = jumpForce; // Also apply to double jump
+            if (_buffManager != null)
+            {
+                currentJumpForce *= _buffManager.JumpForceMultiplier.Value;
+            }
             rb.linearVelocity = new Vector2(rb.linearVelocity.x, 0f); // Reset vertical velocity before double jumping
-            rb.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
+            rb.AddForce(Vector2.up * currentJumpForce, ForceMode2D.Impulse);
             canDoubleJump = false;
             Debug.Log("Double Jumped!");
         }
