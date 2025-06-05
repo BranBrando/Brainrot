@@ -25,6 +25,16 @@ public class PlayerAttack : NetworkBehaviour
     [SerializeField] private Vector2 spinAttackOffset = new Vector2(0f, 0f);   // Added offset
     private bool isSpinAttacking = false;
 
+    public void ResetAttackStates()
+    {
+        isSpinAttacking = false;
+        FinishAttack();
+        FinishSpecialAttack();
+        ResetAttackTrigger();
+        ResetSpinAttackTrigger();
+        Debug.Log("PlayerAttack states reset (isSpinAttacking and animation triggers).");
+    }
+
     // Original attack parameters to store initial values
     private Vector2 _originalLightAttackSize;
     private Vector2 _originalLightAttackOffset;
@@ -200,6 +210,7 @@ public class PlayerAttack : NetworkBehaviour
         {
             anim.SetTrigger("attack");
         }
+        if (playerMovement != null) playerMovement.IsAttacking = true;
     }
 
     private void OnSpecialAttack(InputAction.CallbackContext context)
@@ -214,7 +225,7 @@ public class PlayerAttack : NetworkBehaviour
                 anim.SetTrigger("spinAttack");
             }
             // Optional: if special attack should affect movement state
-            // if (playerMovement != null) playerMovement.IsAttacking = true;
+            if (playerMovement != null) playerMovement.IsAttacking = true;
             Debug.Log("Special Attack Initiated!");
         }
     }
@@ -230,6 +241,7 @@ public class PlayerAttack : NetworkBehaviour
         if (_buffManager != null)
         {
             actualLightAttackDamage *= _buffManager.DamageOutputMultiplier.Value;
+            Debug.Log($"PlayerAttack: Current Damage Output Multiplier (Light Attack): {_buffManager.DamageOutputMultiplier.Value}");
         }
 
         foreach (Collider2D hitCollider in hitColliders)
@@ -259,6 +271,7 @@ public class PlayerAttack : NetworkBehaviour
         if (_buffManager != null)
         {
             actualHeavyAttackDamage *= _buffManager.DamageOutputMultiplier.Value;
+            Debug.Log($"PlayerAttack: Current Damage Output Multiplier (Heavy Attack): {_buffManager.DamageOutputMultiplier.Value}");
         }
 
         foreach (Collider2D hitCollider in hitColliders)
@@ -288,6 +301,7 @@ public class PlayerAttack : NetworkBehaviour
         if (_buffManager != null)
         {
             actualSpinAttackDamage *= _buffManager.DamageOutputMultiplier.Value;
+            Debug.Log($"PlayerAttack: Current Damage Output Multiplier (Special Attack): {_buffManager.DamageOutputMultiplier.Value}");
         }
 
         foreach (Collider2D hitCollider in hitColliders)
@@ -319,17 +333,17 @@ public class PlayerAttack : NetworkBehaviour
         }
     }
 
-    public void FinishHeavyAttack()
+    public void FinishAttack()
     {
         if (playerMovement != null) playerMovement.IsAttacking = false;
-        Debug.Log("Heavy attack finished!");
+        Debug.Log("Attack finished!");
     }
 
     public void FinishSpecialAttack()
     {
         isSpinAttacking = false;
         // Optional: if special attack affected movement state
-        // if (playerMovement != null) playerMovement.IsAttacking = false;
+        if (playerMovement != null) playerMovement.IsAttacking = false;
         Debug.Log("Special attack finished!");
     }
 
@@ -338,6 +352,14 @@ public class PlayerAttack : NetworkBehaviour
         if (anim != null)
         {
             anim.ResetTrigger("attack");
+        }
+    }
+
+    public void ResetSpinAttackTrigger()
+    {
+        if (anim != null)
+        {
+            anim.ResetTrigger("spinAttack");
         }
     }
 

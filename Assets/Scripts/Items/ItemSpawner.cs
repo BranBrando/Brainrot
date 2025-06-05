@@ -126,7 +126,7 @@ public class ItemSpawner : NetworkBehaviour
     private void CleanupExistingItems()
     {
         // Find all NetworkObjects with ItemPickup component and despawn them
-        ItemPickup[] existingPickups = FindObjectsOfType<ItemPickup>();
+        ItemPickup[] existingPickups = FindObjectsByType<ItemPickup>(FindObjectsSortMode.None);
         foreach (ItemPickup pickup in existingPickups)
         {
             if (pickup.IsSpawned) // Ensure it's a networked object

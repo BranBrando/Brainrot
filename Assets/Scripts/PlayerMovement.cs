@@ -49,6 +49,18 @@ public class PlayerMovement : NetworkBehaviour
     private float originalGravityScale;
     public bool IsAttacking { get; set; } // Flag to pause movement during attacks
 
+    public void ResetMovementStates()
+    {
+        isDashing = false;
+        IsAttacking = false; // Reset the general attacking flag
+        currentDashTime = 0f;
+        if (rb != null && originalGravityScale != 0)
+        {
+            rb.gravityScale = originalGravityScale;
+        }
+        Debug.Log("PlayerMovement states reset (isDashing, IsAttacking).");
+    }
+
     public override void OnNetworkSpawn()
     {
         CameraController camController = CameraController.Instance; // Use the singleton instance
@@ -84,6 +96,11 @@ public class PlayerMovement : NetworkBehaviour
         playerInput = gameObject.GetComponent<PlayerInput>();
         rb = GetComponent<Rigidbody2D>();
         health = GetComponent<Health>(); // Get the Health component
+        _buffManager = GetComponent<PlayerBuffManager>(); // Initialize the buff manager
+        if (_buffManager == null)
+        {
+            Debug.LogError("PlayerMovement: PlayerBuffManager component not found on this GameObject!", this);
+        }
 
         // Ensure the Action Map name matches the one in your Input Actions asset
         moveAction = playerInput.actions["Player/Move"];
@@ -275,6 +292,7 @@ public class PlayerMovement : NetworkBehaviour
         if (_buffManager != null)
         {
             currentMoveSpeed *= _buffManager.SpeedMultiplier.Value;
+            Debug.Log($"PlayerMovement: Current Speed Multiplier: {_buffManager.SpeedMultiplier.Value}");
         }
         rb.linearVelocity = new Vector2(moveDirection * currentMoveSpeed, rb.linearVelocity.y);
         FlipCheck(); // Call flip check
@@ -328,6 +346,7 @@ public class PlayerMovement : NetworkBehaviour
         {
             currentDashSpeed *= _buffManager.DashSpeedMultiplier.Value;
             currentActualDashDuration *= _buffManager.DashDurationMultiplier.Value;
+            Debug.Log($"PlayerMovement: Current Dash Speed Multiplier: {_buffManager.DashSpeedMultiplier.Value}, Dash Duration Multiplier: {_buffManager.DashDurationMultiplier.Value}");
         }
 
         rb.linearVelocity = dashDirection * currentDashSpeed; // Maintain dash velocity
@@ -348,7 +367,7 @@ public class PlayerMovement : NetworkBehaviour
         }
 
         isDashing = false;
-        rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y); // Stop horizontal movement
+        if (isGrounded) rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y); // Stop horizontal movement
         rb.gravityScale = originalGravityScale; // Restore gravity
     }
 
@@ -384,7 +403,7 @@ public class PlayerMovement : NetworkBehaviour
                 dashDirection = new Vector2(Mathf.Sign(horizontalInput), 0f);
             }
 
-            rb.gravityScale = 0f;
+            // rb.gravityScale = 0f;
             float currentDashSpeed = dashSpeed;
             if (_buffManager != null)
             {
@@ -427,6 +446,7 @@ public class PlayerMovement : NetworkBehaviour
             if (_buffManager != null)
             {
                 currentJumpForce *= _buffManager.JumpForceMultiplier.Value;
+                Debug.Log($"PlayerMovement: Current Jump Force Multiplier (Grounded): {_buffManager.JumpForceMultiplier.Value}");
             }
             rb.linearVelocity = new Vector2(rb.linearVelocity.x, 0f); // Reset vertical velocity before jumping
             rb.AddForce(Vector2.up * currentJumpForce, ForceMode2D.Impulse);
@@ -439,6 +459,7 @@ public class PlayerMovement : NetworkBehaviour
             if (_buffManager != null)
             {
                 currentJumpForce *= _buffManager.JumpForceMultiplier.Value;
+                Debug.Log($"PlayerMovement: Current Jump Force Multiplier (Double Jump): {_buffManager.JumpForceMultiplier.Value}");
             }
             rb.linearVelocity = new Vector2(rb.linearVelocity.x, 0f); // Reset vertical velocity before double jumping
             rb.AddForce(Vector2.up * currentJumpForce, ForceMode2D.Impulse);

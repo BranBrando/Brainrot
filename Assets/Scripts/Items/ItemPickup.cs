@@ -66,12 +66,15 @@ public class ItemPickup : NetworkBehaviour
             PlayerBuffManager playerBuffManager = player.GetComponent<PlayerBuffManager>();
             if (playerBuffManager != null)
             {
-                playerBuffManager.ApplyEffectServerRpc(
-                    itemEffect.effectType,
-                    itemEffect.magnitude,
-                    itemEffect.duration
-                );
-                Debug.Log($"Server: Player {player.OwnerClientId} picked up {itemEffect.itemName}.");
+                foreach (var effectData in itemEffect.effects)
+                {
+                    playerBuffManager.ApplyEffectServerRpc(
+                        effectData.effectType,
+                        effectData.magnitude,
+                        effectData.duration
+                    );
+                }
+                Debug.Log($"Server: Player {player.OwnerClientId} picked up {itemEffect.itemName}. Applied {itemEffect.effects.Count} effects.");
                 GetComponent<NetworkObject>()?.Despawn();
             }
             else

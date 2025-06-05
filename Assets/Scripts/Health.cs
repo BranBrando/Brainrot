@@ -205,9 +205,22 @@ public class Health : NetworkBehaviour // Changed to NetworkBehaviour
         currentDamagePercentage = 0f;
         rb.linearVelocity = Vector2.zero;
         isBeingKnockedBack = false;
+        
         inContactWithOtherCharacter = false; // Reset contact state
         rb.linearDamping = normalLinearDamping;
         gameObject.SetActive(true);
+
+        PlayerMovement playerMovement = GetComponent<PlayerMovement>();
+        if (playerMovement != null)
+        {
+            playerMovement.ResetMovementStates();
+        }
+
+        PlayerAttack playerAttack = GetComponent<PlayerAttack>();
+        if (playerAttack != null)
+        {
+            playerAttack.ResetAttackStates();
+        }
     }
 
     // New method to reset state for a new game

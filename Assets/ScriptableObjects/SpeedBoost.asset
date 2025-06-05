@@ -12,9 +12,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bf8578cc1ae53904c9a1b4db26f33464, type: 3}
   m_Name: SpeedBoost
   m_EditorClassIdentifier: 
-  effectType: 0
-  magnitude: 2
-  duration: 10
+  effects:
+  - effectType: 0
+    magnitude: 1.5
+    duration: 10
+  - effectType: 2
+    magnitude: 1.5
+    duration: 10
   itemSprite: {fileID: 10913, guid: 0000000000000000f000000000000000, type: 0}
   itemPickupWorldPrefab: {fileID: 3293000001431083373, guid: 831a802dabfdfa042ac90cf45c813cd6, type: 3}
   itemName: New Item

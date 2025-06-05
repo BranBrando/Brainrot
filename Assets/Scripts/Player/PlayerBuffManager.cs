@@ -25,13 +25,17 @@ public class PlayerBuffManager : NetworkBehaviour
     // --- Active Buff Management ---
     private class ActiveBuff
     {
-        public ItemEffectSO Effect { get; }
-        public float RemainingTime { get; set; }
+        public ItemEffectSO.EffectType Type { get; }
+        public float Magnitude { get; }
+        public float OriginalDuration { get; } // To store the initial duration for reset
+        public float RemainingTime { get; set; } // Can be used for UI or other timed logic
         public Coroutine ExpiryCoroutine { get; set; }
 
-        public ActiveBuff(ItemEffectSO effect, float remainingTime)
+        public ActiveBuff(ItemEffectSO.EffectType type, float magnitude, float duration, float remainingTime)
         {
-            Effect = effect; // Store the SO directly
+            Type = type;
+            Magnitude = magnitude;
+            OriginalDuration = duration; // Store the original duration
             RemainingTime = remainingTime;
         }
     }
@@ -140,20 +144,15 @@ public class PlayerBuffManager : NetworkBehaviour
 
         Debug.Log($"Server (PlayerBuffManager on {OwnerClientId}): Applying effect {effectType} with mag {magnitude}, dur {duration}");
 
-        ActiveBuff existingBuff = _activeBuffsList.Find(b => b.Effect.effectType == effectType);
+        ActiveBuff existingBuff = _activeBuffsList.Find(b => b.Type == effectType);
         if (existingBuff != null)
         {
             if (existingBuff.ExpiryCoroutine != null) StopCoroutine(existingBuff.ExpiryCoroutine);
-            ResetEffectValues(existingBuff.Effect);
+            ResetEffectValues(existingBuff.Type, existingBuff.Magnitude);
             _activeBuffsList.Remove(existingBuff);
         }
         
-        ItemEffectSO effectData = ScriptableObject.CreateInstance<ItemEffectSO>();
-        effectData.effectType = effectType;
-        effectData.magnitude = magnitude;
-        effectData.duration = duration;
-        
-        ActiveBuff newBuff = new ActiveBuff(effectData, duration);
+        ActiveBuff newBuff = new ActiveBuff(effectType, magnitude, duration, duration);
 
         switch (effectType)
         {
@@ -178,33 +177,33 @@ public class PlayerBuffManager : NetworkBehaviour
 
     private IEnumerator TimedEffectRemovalCoroutine(ActiveBuff buffToExpire)
     {
-        yield return new WaitForSeconds(buffToExpire.Effect.duration);
+        yield return new WaitForSeconds(buffToExpire.OriginalDuration);
 
         if (_activeBuffsList.Contains(buffToExpire))
         {
-            ResetEffectValues(buffToExpire.Effect);
+            ResetEffectValues(buffToExpire.Type, buffToExpire.Magnitude);
             _activeBuffsList.Remove(buffToExpire);
-            Debug.Log($"Server (PlayerBuffManager on {OwnerClientId}): Timed effect {buffToExpire.Effect.effectType} expired.");
+            Debug.Log($"Server (PlayerBuffManager on {OwnerClientId}): Timed effect {buffToExpire.Type} expired.");
             SanitizeMultipliers();
         }
     }
 
-    private void ResetEffectValues(ItemEffectSO effectToReset)
+    private void ResetEffectValues(ItemEffectSO.EffectType effectType, float magnitude)
     {
         if (!IsServer) return;
 
-        switch (effectToReset.effectType)
+        switch (effectType)
         {
-            case ItemEffectSO.EffectType.Speed: SpeedMultiplier.Value /= effectToReset.magnitude; break;
-            case ItemEffectSO.EffectType.JumpForce: JumpForceMultiplier.Value /= effectToReset.magnitude; break;
-            case ItemEffectSO.EffectType.DashSpeed: DashSpeedMultiplier.Value /= effectToReset.magnitude; break;
-            case ItemEffectSO.EffectType.DashDuration: DashDurationMultiplier.Value /= effectToReset.magnitude; break;
+            case ItemEffectSO.EffectType.Speed: SpeedMultiplier.Value /= magnitude; break;
+            case ItemEffectSO.EffectType.JumpForce: JumpForceMultiplier.Value /= magnitude; break;
+            case ItemEffectSO.EffectType.DashSpeed: DashSpeedMultiplier.Value /= magnitude; break;
+            case ItemEffectSO.EffectType.DashDuration: DashDurationMultiplier.Value /= magnitude; break;
             case ItemEffectSO.EffectType.Size: 
                 // Reset scale multiplier to 1 (original size)
                 ScaleMultiplier.Value = Vector3.one; 
                 break;
-            case ItemEffectSO.EffectType.DamageOutput: DamageOutputMultiplier.Value /= effectToReset.magnitude; break;
-            case ItemEffectSO.EffectType.DamageTaken: DamageTakenMultiplier.Value /= effectToReset.magnitude; break;
+            case ItemEffectSO.EffectType.DamageOutput: DamageOutputMultiplier.Value /= magnitude; break;
+            case ItemEffectSO.EffectType.DamageTaken: DamageTakenMultiplier.Value /= magnitude; break;
         }
     }
 
@@ -231,11 +230,11 @@ public class PlayerBuffManager : NetworkBehaviour
     {
         if (!IsServer) return;
 
-        ActiveBuff buffToRemove = _activeBuffsList.Find(b => b.Effect.effectType == effectTypeToRemove);
+        ActiveBuff buffToRemove = _activeBuffsList.Find(b => b.Type == effectTypeToRemove);
         if (buffToRemove != null)
         {
             if (buffToRemove.ExpiryCoroutine != null) StopCoroutine(buffToRemove.ExpiryCoroutine);
-            ResetEffectValues(buffToRemove.Effect);
+            ResetEffectValues(buffToRemove.Type, buffToRemove.Magnitude);
             _activeBuffsList.Remove(buffToRemove);
             Debug.Log($"Server (PlayerBuffManager on {OwnerClientId}): Removed buff {effectTypeToRemove} by RPC.");
             SanitizeMultipliers();
@@ -249,7 +248,7 @@ public class PlayerBuffManager : NetworkBehaviour
         foreach (var activeBuff in new List<ActiveBuff>(_activeBuffsList))
         {
              if (activeBuff.ExpiryCoroutine != null) StopCoroutine(activeBuff.ExpiryCoroutine);
-             ResetEffectValues(activeBuff.Effect);
+             ResetEffectValues(activeBuff.Type, activeBuff.Magnitude);
         }
         _activeBuffsList.Clear();
         SpeedMultiplier.Value = 1f;
