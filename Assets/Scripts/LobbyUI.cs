@@ -12,10 +12,14 @@ public class LobbyUI : MonoBehaviour
     [SerializeField] private GameObject mainPanel;
     [SerializeField] private GameObject lobbyListPanel;
     [SerializeField] private GameObject inLobbyPanel;
+    [SerializeField] private GameObject createLobbyPanel;
+    [SerializeField] private GameObject joinLobbyPanel;
 
     [Header("Status & Player Name")]
     [SerializeField] private TMP_InputField playerNameInputField;
     [SerializeField] private TextMeshProUGUI statusText;
+    [SerializeField] private Button createLobbyButtonFromMain;
+    [SerializeField] private Button joinLobbyButtonFromMain;
 
     [Header("Create Lobby Panel")]
     [SerializeField] private TMP_InputField createLobbyNameInputField;
@@ -63,7 +67,16 @@ public class LobbyUI : MonoBehaviour
         UpdateStatus("Initializing Unity Services...");
         await UnityServicesInitializer.InitializeUnityServices();
         UpdateStatus("Unity Services Initialized and Authenticated.");
-
+        createLobbyButtonFromMain.onClick.AddListener(() =>
+        {
+            ShowPanel(lobbyListPanel);
+            ShowPanel(createLobbyPanel);
+        });
+        joinLobbyButtonFromMain.onClick.AddListener(() =>
+        {
+            ShowPanel(lobbyListPanel);
+            ShowPanel(joinLobbyPanel);
+        });
         // Set up button listeners
         createLobbyButton.onClick.AddListener(HandleCreateLobby);
         refreshLobbiesButton.onClick.AddListener(HandleRefreshLobbies);
@@ -81,8 +94,10 @@ public class LobbyUI : MonoBehaviour
 
         // Initial UI state
         ShowPanel(mainPanel);
-        ShowPanel(lobbyListPanel); // Show lobby list by default
+        HidePanel(lobbyListPanel); // Show lobby list by default
         HidePanel(inLobbyPanel);
+        HidePanel(createLobbyPanel);
+        HidePanel(joinLobbyPanel);
     }
 
     private void OnDestroy()
