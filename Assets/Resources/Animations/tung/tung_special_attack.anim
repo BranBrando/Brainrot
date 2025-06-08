@@ -6,7 +6,7 @@ AnimationClip:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: tung_spin_attack
+  m_Name: tung_special_attack
   serializedVersion: 7
   m_Legacy: 0
   m_Compressed: 0
@@ -100,7 +100,7 @@ AnimationClip:
   m_HasGenericRootTransform: 0
   m_HasMotionFloatCurves: 0
   m_Events:
-  - time: 0.76666665
+  - time: 0.75
     functionName: PerformSpecialAttackDamageCheck
     data: 
     objectReferenceParameter: {fileID: 0}

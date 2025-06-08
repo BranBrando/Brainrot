@@ -20,18 +20,24 @@ public class PlayerAttack : NetworkBehaviour
     [SerializeField] private ForceMode2D heavyAttackDashMode = ForceMode2D.Impulse;
 
     [Header("Special Attack Parameters")]
-    [SerializeField] private float spinAttackDamage = 15f;
-    [SerializeField] private Vector2 spinAttackSize = new Vector2(0.8f, 0.8f); // Changed from radius to size
-    [SerializeField] private Vector2 spinAttackOffset = new Vector2(0f, 0f);   // Added offset
-    private bool isSpinAttacking = false;
+    [SerializeField] private float specialAttackDamage = 15f;
+    [SerializeField] private Vector2 specialAttackSize = new Vector2(0.8f, 0.8f); // Changed from radius to size
+    [SerializeField] private Vector2 specialAttackOffset = new Vector2(0f, 0f);   // Added offset
+    [SerializeField] private Transform specialAttackEffect; // Cooldown for special attack
+    private bool isSpecialAttacking = false;
 
     public void ResetAttackStates()
     {
-        isSpinAttacking = false;
+        isSpecialAttacking = false;
         FinishAttack();
         FinishSpecialAttack();
         ResetAttackTrigger();
         ResetSpinAttackTrigger();
+        if (specialAttackEffect != null)
+        {
+            // Ensure the special attack effect is inactive at start
+            specialAttackEffect.gameObject.SetActive(false);
+        }
         Debug.Log("PlayerAttack states reset (isSpinAttacking and animation triggers).");
     }
 
@@ -40,15 +46,15 @@ public class PlayerAttack : NetworkBehaviour
     private Vector2 _originalLightAttackOffset;
     private Vector2 _originalHeavyAttackSize;
     private Vector2 _originalHeavyAttackOffset;
-    private Vector2 _originalSpinAttackSize;
-    private Vector2 _originalSpinAttackOffset;
+    private Vector2 _originalSpecialAttackSize;
+    private Vector2 _originalSpecialAttackOffset;
 
     // Current attack parameters, dynamically adjusted by buffs
     private Vector2 _currentLightAttackSize;
     private Vector2 _currentLightAttackOffset;
     private Vector2 _currentHeavyAttackSize;
     private Vector2 _currentHeavyAttackOffset;
-    private Vector2 _currentSpinAttackSize;
+    private Vector2 _currentSpecialAttackSize;
     private Vector2 _currentSpinAttackOffset;
 
     private PlayerInput playerInput;
@@ -66,16 +72,16 @@ public class PlayerAttack : NetworkBehaviour
         _originalLightAttackOffset = lightAttackOffset;
         _originalHeavyAttackSize = heavyAttackSize;
         _originalHeavyAttackOffset = heavyAttackOffset;
-        _originalSpinAttackSize = spinAttackSize;
-        _originalSpinAttackOffset = spinAttackOffset;
+        _originalSpecialAttackSize = specialAttackSize;
+        _originalSpecialAttackOffset = specialAttackOffset;
 
         // Initialize current values to original values
         _currentLightAttackSize = _originalLightAttackSize;
         _currentLightAttackOffset = _originalLightAttackOffset;
         _currentHeavyAttackSize = _originalHeavyAttackSize;
         _currentHeavyAttackOffset = _originalHeavyAttackOffset;
-        _currentSpinAttackSize = _originalSpinAttackSize;
-        _currentSpinAttackOffset = _originalSpinAttackOffset;
+        _currentSpecialAttackSize = _originalSpecialAttackSize;
+        _currentSpinAttackOffset = _originalSpecialAttackOffset;
     }
 
     public override void OnNetworkSpawn()
@@ -132,6 +138,11 @@ public class PlayerAttack : NetworkBehaviour
         {
             Debug.LogWarning("PlayerAttack: PlayerMovement component not found on Player.");
         }
+        if (specialAttackEffect != null)
+        {
+            // Ensure the special attack effect is inactive at start
+            specialAttackEffect.gameObject.SetActive(false);
+        }
     }
 
     public override void OnNetworkDespawn()
@@ -150,6 +161,25 @@ public class PlayerAttack : NetworkBehaviour
         }
     }
 
+    // void Update()
+    // {
+    //     // Cache original values from serialized fields
+    //     _originalLightAttackSize = lightAttackSize;
+    //     _originalLightAttackOffset = lightAttackOffset;
+    //     _originalHeavyAttackSize = heavyAttackSize;
+    //     _originalHeavyAttackOffset = heavyAttackOffset;
+    //     _originalSpecialAttackSize = specialAttackSize;
+    //     _originalSpecialAttackOffset = specialAttackOffset;
+
+    //     // Initialize current values to original values
+    //     _currentLightAttackSize = _originalLightAttackSize;
+    //     _currentLightAttackOffset = _originalLightAttackOffset;
+    //     _currentHeavyAttackSize = _originalHeavyAttackSize;
+    //     _currentHeavyAttackOffset = _originalHeavyAttackOffset;
+    //     _currentSpecialAttackSize = _originalSpecialAttackSize;
+    //     _currentSpinAttackOffset = _originalSpecialAttackOffset;
+    // }
+
     private void HandleScaleMultiplierChanged(Vector3 previousValue, Vector3 newValue)
     {
         // This method is called on all clients when ScaleMultiplier changes.
@@ -161,52 +191,26 @@ public class PlayerAttack : NetworkBehaviour
     {
         float scaleX = Mathf.Abs(scaleMultiplier.x);
         float scaleY = Mathf.Abs(scaleMultiplier.y);
-        float compensationFactor = 1f; // Tune this value (0 to 1, or even slightly > 1)
-
+        
         // Scale attack sizes
         _currentLightAttackSize = _originalLightAttackSize * new Vector2(scaleX, scaleY);
         _currentHeavyAttackSize = _originalHeavyAttackSize * new Vector2(scaleX, scaleY);
-        _currentSpinAttackSize = _originalSpinAttackSize * new Vector2(scaleX, scaleY);
+        _currentSpecialAttackSize = _originalSpecialAttackSize * new Vector2(scaleX, scaleY);
 
         // Calculate and apply scaled offsets with compensation
         Vector2 currentLightOffset = _originalLightAttackOffset * new Vector2(scaleX, scaleY);
         Vector2 currentHeavyOffset = _originalHeavyAttackOffset * new Vector2(scaleX, scaleY);
-        Vector2 currentSpinOffset = _originalSpinAttackOffset * new Vector2(scaleX, scaleY);
-
-        // Apply compensation if shrunk
-        if (scaleX < 1.0f)
-        {
-            // Compensate for light attack offset X
-            if (_originalLightAttackOffset.x != 0)
-            {
-                float lightOffsetShrinkage = _originalLightAttackOffset.x * (1.0f - scaleX);
-                currentLightOffset.x += lightOffsetShrinkage * compensationFactor * Mathf.Sign(_originalLightAttackOffset.x);
-            }
-
-            // Compensate for heavy attack offset X
-            if (_originalHeavyAttackOffset.x != 0)
-            {
-                float heavyOffsetShrinkage = _originalHeavyAttackOffset.x * (1.0f - scaleX);
-                currentHeavyOffset.x += heavyOffsetShrinkage * compensationFactor * Mathf.Sign(_originalHeavyAttackOffset.x);
-            }
-
-            // Compensate for spin attack offset X
-            if (_originalSpinAttackOffset.x != 0)
-            {
-                float spinOffsetShrinkage = _originalSpinAttackOffset.x * (1.0f - scaleX);
-                currentSpinOffset.x += spinOffsetShrinkage * compensationFactor * Mathf.Sign(_originalSpinAttackOffset.x);
-            }
-        }
+        Vector2 currentSpecialOffset = _originalSpecialAttackOffset * new Vector2(scaleX, scaleY);
 
         _currentLightAttackOffset = currentLightOffset;
         _currentHeavyAttackOffset = currentHeavyOffset;
-        _currentSpinAttackOffset = currentSpinOffset;
+        _currentSpinAttackOffset = currentSpecialOffset;
     }
 
     private void OnAttack(InputAction.CallbackContext context)
     {
         // Basic attack logic, ensure it doesn't conflict with special attack
-        if (anim != null && !isSpinAttacking && (playerMovement == null || playerMovement.CanAttack()))
+        if (anim != null && !isSpecialAttacking && (playerMovement == null || playerMovement.CanAttack()))
         {
             anim.SetTrigger("attack");
         }
@@ -216,9 +220,9 @@ public class PlayerAttack : NetworkBehaviour
     private void OnSpecialAttack(InputAction.CallbackContext context)
     {
         // Cooldown check removed
-        if (!isSpinAttacking && (playerMovement == null || playerMovement.CanAttack()))
+        if (!isSpecialAttacking && (playerMovement == null || playerMovement.CanAttack()))
         {
-            isSpinAttacking = true;
+            isSpecialAttacking = true;
             // lastSpinAttackTime = Time.time; // Removed
             if (anim != null)
             {
@@ -226,6 +230,12 @@ public class PlayerAttack : NetworkBehaviour
             }
             // Optional: if special attack should affect movement state
             if (playerMovement != null) playerMovement.IsAttacking = true;
+
+            if (specialAttackEffect != null)
+            {
+                // Instantiate or activate special attack effect
+                specialAttackEffect.gameObject.SetActive(true);
+            }
             Debug.Log("Special Attack Initiated!");
         }
     }
@@ -295,9 +305,9 @@ public class PlayerAttack : NetworkBehaviour
         bool isFacingRight = transform.localScale.x > 0;
         Vector2 currentAttackOffset = isFacingRight ? _currentSpinAttackOffset : new Vector2(-_currentSpinAttackOffset.x, _currentSpinAttackOffset.y);
         Vector2 attackPosition = (Vector2)transform.position + currentAttackOffset;
-        Collider2D[] hitColliders = Physics2D.OverlapBoxAll(attackPosition, _currentSpinAttackSize, 0, hittableLayer);
+        Collider2D[] hitColliders = Physics2D.OverlapBoxAll(attackPosition, _currentSpecialAttackSize, 0, hittableLayer);
 
-        float actualSpinAttackDamage = spinAttackDamage;
+        float actualSpinAttackDamage = specialAttackDamage;
         if (_buffManager != null)
         {
             actualSpinAttackDamage *= _buffManager.DamageOutputMultiplier.Value;
@@ -341,9 +351,14 @@ public class PlayerAttack : NetworkBehaviour
 
     public void FinishSpecialAttack()
     {
-        isSpinAttacking = false;
+        isSpecialAttacking = false;
         // Optional: if special attack affected movement state
         if (playerMovement != null) playerMovement.IsAttacking = false;
+        if (specialAttackEffect != null)
+        {
+            // Deactivate or reset special attack effect
+            specialAttackEffect.gameObject.SetActive(false);
+        }
         Debug.Log("Special attack finished!");
     }
 
@@ -383,6 +398,6 @@ public class PlayerAttack : NetworkBehaviour
         Gizmos.color = Color.cyan;
         Vector2 currentSpinAttackOffset = transform.localScale.x > 0 ? _currentSpinAttackOffset : new Vector2(-_currentSpinAttackOffset.x, _currentSpinAttackOffset.y); // If directional
         Vector2 spinGizmoPosition = (Vector2)transform.position + currentSpinAttackOffset; // Assuming centered for Gizmo too
-        Gizmos.DrawWireCube(spinGizmoPosition, _currentSpinAttackSize); // Changed to DrawWireCube
+        Gizmos.DrawWireCube(spinGizmoPosition, _currentSpecialAttackSize); // Changed to DrawWireCube
     }
 }
