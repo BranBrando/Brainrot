@@ -453,8 +453,8 @@ MonoBehaviour:
   lightAttackSize: {x: 2.5, y: 3}
   lightAttackOffset: {x: 2.5, y: 1}
   heavyAttackDamage: 4
-  heavyAttackSize: {x: 4, y: 5}
-  heavyAttackOffset: {x: 2, y: 0.5}
+  heavyAttackSize: {x: 3, y: 4}
+  heavyAttackOffset: {x: 2, y: 1}
   heavyAttackDashForce: 15
   heavyAttackDashMode: 1
   specialAttackDamage: 15

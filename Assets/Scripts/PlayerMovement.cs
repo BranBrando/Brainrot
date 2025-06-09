@@ -322,8 +322,7 @@ public class PlayerMovement : NetworkBehaviour
 
     private void TriggerDash(InputAction.CallbackContext context)
     {
-        // Prevent dashing if being knocked back
-        if (health != null && health.IsBeingKnockedBack())
+        if (health != null && health.IsBeingKnockedBack() || IsAttacking)
         {
             return;
         }
@@ -434,8 +433,7 @@ public class PlayerMovement : NetworkBehaviour
 
     public void OnJump(InputAction.CallbackContext context)
     {
-        // Prevent jumping if being knocked back
-        if (health != null && health.IsBeingKnockedBack())
+        if (health != null && health.IsBeingKnockedBack() || IsAttacking)
         {
             return;
         }
