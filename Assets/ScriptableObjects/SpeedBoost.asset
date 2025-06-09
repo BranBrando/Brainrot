@@ -20,6 +20,6 @@ MonoBehaviour:
     magnitude: 1.5
     duration: 10
   itemSprite: {fileID: 10913, guid: 0000000000000000f000000000000000, type: 0}
-  itemPickupWorldPrefab: {fileID: 3293000001431083373, guid: 831a802dabfdfa042ac90cf45c813cd6, type: 3}
+  itemPickupWorldPrefab: {fileID: 3293000001431083373, guid: 27ed88057cd3c1a469e4ca243bd284cc, type: 3}
   itemName: New Item
   description: Applies an effect to the player.

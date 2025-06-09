@@ -34,12 +34,19 @@ public class LobbyUI : MonoBehaviour
     [SerializeField] private TMP_InputField joinLobbyCodeInputField;
     [SerializeField] private Button joinLobbyByCodeButton;
 
+    [Header("Character Selection Panel")]
+    [SerializeField] private GameObject characterSelectionPanel;
+    [SerializeField] private Transform characterButtonParent; // Parent for character selection buttons
+    [SerializeField] private GameObject characterButtonPrefab; // Prefab for a character button
+    [SerializeField] private TextMeshProUGUI selectedCharacterText; // Displays current selection
+
     [Header("In-Lobby Panel")]
     [SerializeField] private TextMeshProUGUI currentLobbyNameText;
     [SerializeField] private TextMeshProUGUI currentLobbyCodeText;
     [SerializeField] private TextMeshProUGUI currentLobbyPlayersText; // Displays player names
     [SerializeField] private Button startGameButton;
     [SerializeField] private Button leaveLobbyButton;
+    [SerializeField] private Button toggleReadyButton; // For clients to ready up
 
     private void Awake()
     {
@@ -83,6 +90,7 @@ public class LobbyUI : MonoBehaviour
         joinLobbyByCodeButton.onClick.AddListener(HandleJoinLobbyByCode);
         leaveLobbyButton.onClick.AddListener(HandleLeaveLobby);
         startGameButton.onClick.AddListener(HandleStartGame);
+        toggleReadyButton.onClick.AddListener(HandleToggleReady); // New listener
 
         // Subscribe to LobbyManager events
         LobbyManager.Instance.OnLobbyListChanged += UpdateLobbyListUIWithData;
@@ -94,10 +102,11 @@ public class LobbyUI : MonoBehaviour
 
         // Initial UI state
         ShowPanel(mainPanel);
-        HidePanel(lobbyListPanel); // Show lobby list by default
+        HidePanel(lobbyListPanel);
         HidePanel(inLobbyPanel);
         HidePanel(createLobbyPanel);
         HidePanel(joinLobbyPanel);
+        HidePanel(characterSelectionPanel); // New: Hide character selection panel initially
     }
 
     private void OnDestroy()
@@ -206,6 +215,34 @@ public class LobbyUI : MonoBehaviour
         await LobbyManager.Instance.StartGame();
     }
 
+    private async void HandleToggleReady()
+    {
+        if (LobbyManager.Instance.JoinedLobby == null) return;
+
+        Player localPlayer = LobbyManager.Instance.JoinedLobby.Players.Find(p => p.Id == LobbyManager.Instance.PlayerId);
+        if (localPlayer == null) return;
+
+        bool currentReadyState = false;
+        if (localPlayer.Data.TryGetValue("IsReady", out PlayerDataObject readyData))
+        {
+            bool.TryParse(readyData.Value, out currentReadyState);
+        }
+        
+        // Also ensure a character is selected before allowing to toggle ready ON
+        if (!currentReadyState) // If trying to become ready
+        {
+            if (string.IsNullOrEmpty(_locallySelectedCharacterId) && 
+                (!localPlayer.Data.TryGetValue("SelectedCharacter", out PlayerDataObject charData) || string.IsNullOrEmpty(charData.Value)))
+            {
+                UpdateStatus("Please select a character before readying up.");
+                return;
+            }
+        }
+
+        UpdateStatus($"Setting ready status to {!currentReadyState}...");
+        await LobbyManager.Instance.SetPlayerReadyStatus(!currentReadyState);
+    }
+
     // --- UI Update Callbacks from LobbyManager Events ---
 
     private void UpdateLobbyListUIWithData(List<Lobby> lobbies)
@@ -239,17 +276,64 @@ public class LobbyUI : MonoBehaviour
         }
     }
 
+    private string _locallySelectedCharacterId = ""; // To keep track of local player's selected character
+
     private void OnJoinedLobbyUI(Lobby lobby)
     {
         HidePanel(lobbyListPanel);
-        ShowPanel(inLobbyPanel);
+        HidePanel(mainPanel); // Hide main menu
+        ShowPanel(characterSelectionPanel); // Show character selection first
+        HidePanel(inLobbyPanel); // Keep in-lobby hidden for now
 
-        currentLobbyNameText.text = $"Lobby: {lobby.Name}";
+        // Populate character selection buttons
+        PopulateCharacterSelectionButtons();
+
+        UpdateStatus($"Joined lobby '{lobby.Name}'. Select your character.");
+        // Update other UI elements as needed (lobby name, code on the character selection panel perhaps)
+        currentLobbyNameText.text = $"Lobby: {lobby.Name}"; // Assuming these are visible on char select panel too
         currentLobbyCodeText.text = $"Code: {lobby.LobbyCode}";
-        UpdateInLobbyPlayersUI(lobby);
+        UpdateInLobbyPlayersUI(lobby); // Update player list on char select panel
 
-        // Only host can start game
+        // Start game button should still be host-only, but its interactability will depend on new conditions
         startGameButton.gameObject.SetActive(lobby.HostId == LobbyManager.Instance.PlayerId);
+        startGameButton.interactable = false; // Initially false, enabled by OnLobbyUpdatedUI
+
+        toggleReadyButton.gameObject.SetActive(lobby.HostId != LobbyManager.Instance.PlayerId); // Only for clients
+    }
+
+    void PopulateCharacterSelectionButtons()
+    {
+        foreach (Transform child in characterButtonParent) Destroy(child.gameObject); // Clear old buttons
+
+        // TODO: Get availableCharacters from somewhere (e.g., a ScriptableObject, GameManager)
+        // For now, let's assume a simple list of strings:
+        List<string> characterNames = new List<string> { "Tung", "Tra" }; 
+
+        foreach (string charName in characterNames)
+        {
+            GameObject charButtonGO = Instantiate(characterButtonPrefab, characterButtonParent);
+            TextMeshProUGUI buttonText = charButtonGO.GetComponentInChildren<TextMeshProUGUI>();
+            Button button = charButtonGO.GetComponent<Button>();
+
+            if (buttonText != null) buttonText.text = charName;
+            if (button != null) button.onClick.AddListener(() => HandleCharacterSelected(charName));
+        }
+    }
+
+    async void HandleCharacterSelected(string characterId)
+    {
+        _locallySelectedCharacterId = characterId;
+        if(selectedCharacterText != null) selectedCharacterText.text = $"Selected: {characterId}";
+        UpdateStatus($"You selected {characterId}.");
+        await LobbyManager.Instance.SetPlayerCharacter(characterId);
+        // After selecting a character, the player might automatically be considered "ready" for character selection
+        // Or they need to click a separate "Confirm Character" or "Ready" button.
+        // For now, selecting a character also sets them as ready.
+        await LobbyManager.Instance.SetPlayerReadyStatus(true); 
+        
+        // Transition to the in-lobby view after selection
+        ShowPanel(inLobbyPanel);
+        HidePanel(characterSelectionPanel);
     }
 
     private void OnLobbyUpdatedUI(Lobby lobby)
@@ -260,8 +344,25 @@ public class LobbyUI : MonoBehaviour
         currentLobbyCodeText.text = $"Code: {lobby.LobbyCode}";
         UpdateInLobbyPlayersUI(lobby);
 
-        // Update host-specific UI if host status changes or players join/leave
-        startGameButton.gameObject.SetActive(lobby.HostId == LobbyManager.Instance.PlayerId);
+        bool isHost = lobby.HostId == LobbyManager.Instance.PlayerId;
+        startGameButton.gameObject.SetActive(isHost);
+        if (isHost)
+        {
+            startGameButton.interactable = LobbyManager.Instance.AreAllPlayersReadyAndSelectedCharacter();
+        }
+
+        // Update client's ready button text/state if needed
+        Player localPlayer = lobby.Players.Find(p => p.Id == LobbyManager.Instance.PlayerId);
+        if (localPlayer != null && localPlayer.Data.TryGetValue("IsReady", out PlayerDataObject readyData))
+        {
+            bool isClientReady = readyData.Value.ToLower() == "true";
+            // Assuming toggleReadyButton has a TextMeshProUGUI child to update
+            TextMeshProUGUI readyButtonText = toggleReadyButton.GetComponentInChildren<TextMeshProUGUI>();
+            if (readyButtonText != null)
+            {
+                readyButtonText.text = isClientReady ? "Unready" : "Ready";
+            }
+        }
     }
 
     private void UpdateInLobbyPlayersUI(Lobby lobby)
@@ -270,7 +371,14 @@ public class LobbyUI : MonoBehaviour
         foreach (Player player in lobby.Players)
         {
             player.Data.TryGetValue("PlayerName", out PlayerDataObject playerNameData);
-            playersString += $"- {playerNameData?.Value ?? "Unknown Player"} (ID: {player.Id})\n";
+            player.Data.TryGetValue("IsReady", out PlayerDataObject isReadyData);
+            player.Data.TryGetValue("SelectedCharacter", out PlayerDataObject selectedCharacterData);
+
+            string playerName = playerNameData?.Value ?? "Unknown";
+            string readyStatus = (isReadyData?.Value.ToLower() == "true") ? "[Ready]" : "[Not Ready]";
+            string character = string.IsNullOrEmpty(selectedCharacterData?.Value) ? "(No Char)" : $"({selectedCharacterData.Value})";
+            
+            playersString += $"- {playerName} {character} {readyStatus}\n";
         }
         currentLobbyPlayersText.text = playersString;
     }
@@ -284,39 +392,54 @@ public class LobbyUI : MonoBehaviour
         UpdateStatus("Lobby list refreshed after leaving.");
     }
 
+    // You might want to add a reference to your main gameplay panel/object if you have one
+    // [Header("Gameplay Elements")]
+    // [SerializeField] private GameObject gameplayRootObject; // Assign in Inspector
+
     private async void OnGameStartedUI(Lobby lobby)
     {
         UpdateStatus("Game starting...");
-        HidePanel(mainPanel); // Hide all lobby UI
+        HidePanel(mainPanel);
+        HidePanel(inLobbyPanel);
+        HidePanel(characterSelectionPanel);
+        // HidePanel(lobbyListPanel); // Should already be hidden
+        // HidePanel(createLobbyPanel);
+        // HidePanel(joinLobbyPanel);
+
+        // If you have a root GameObject for all your gameplay elements, show it here:
+        // if (gameplayRootObject != null) gameplayRootObject.SetActive(true);
 
         string relayJoinCode = lobby.Data["RelayJoinCode"].Value;
 
         if (lobby.HostId == LobbyManager.Instance.PlayerId)
         {
-            // Host already created allocation in CreateLobby, just start Netcode
             NetworkGameManager.Singleton.StartRelayHost();
-            // Load the game scene after Netcode starts - ONLY HOST DOES THIS
-            // IMPORTANT: Replace "GameScene" with the actual name of your game scene
-            // Ensure "GameScene" is added to Build Settings -> Scenes In Build
-            // NetworkManager.Singleton.SceneManager.LoadScene("SampleScene", UnityEngine.SceneManagement.LoadSceneMode.Single);
-            HidePanel(inLobbyPanel); // Hide in-lobby UI
+            // Game now starts in the same scene.
+            // If GameManager.Instance.SetupNewGame() needs to be called to prepare the scene,
+            // the host could do it here after starting the network.
+            // For example:
+            // if (GameManager.Instance != null) GameManager.Instance.SetupNewGame();
         }
         else // This is a client
         {
-            // Client needs to join Relay allocation
             bool joinedRelay = await RelayManager.Instance.JoinRelayAllocation(relayJoinCode);
             if (joinedRelay)
             {
                 NetworkGameManager.Singleton.StartRelayClient();
-                HidePanel(inLobbyPanel); // Hide in-lobby UI
-                // Client does NOT load the scene. It will be loaded automatically by Netcode
-                // when the server loads it.
+                // Clients will have players spawned by NetworkGameManager.
+                // Game state should synchronize from the host.
             }
             else
             {
                 UpdateStatus("Failed to join Relay allocation for game start.");
-                ShowPanel(mainPanel); // Show UI again if failed
+                ShowPanel(mainPanel); // Or revert to characterSelectionPanel / inLobbyPanel
+                // Potentially show other relevant lobby panels too
+                return; // Prevent further execution if Relay join fails
             }
         }
+
+        // At this point, the network is starting/started.
+        // Player prefabs will be spawned by NetworkGameManager.
+        // Your GameManager should handle the actual game logic from here.
     }
 }

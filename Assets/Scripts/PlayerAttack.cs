@@ -191,7 +191,7 @@ public class PlayerAttack : NetworkBehaviour
     {
         float scaleX = Mathf.Abs(scaleMultiplier.x);
         float scaleY = Mathf.Abs(scaleMultiplier.y);
-        
+
         // Scale attack sizes
         _currentLightAttackSize = _originalLightAttackSize * new Vector2(scaleX, scaleY);
         _currentHeavyAttackSize = _originalHeavyAttackSize * new Vector2(scaleX, scaleY);
