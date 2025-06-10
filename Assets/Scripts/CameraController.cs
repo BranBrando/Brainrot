@@ -3,6 +3,8 @@ using UnityEngine;
 
 public class CameraController : MonoBehaviour
 {
+    public static CameraController Instance { get; private set; } // Singleton instance
+
     [Header("Targets")]
     public Transform playerTarget;
     public List<Transform> enemyTargets = new List<Transform>();
@@ -27,25 +29,45 @@ public class CameraController : MonoBehaviour
 
     private void Awake()
     {
-        mainCamera = GetComponent<Camera>();
+        // Singleton setup
+        if (Instance != null && Instance != this)
+        {
+            Debug.LogWarning("CameraController: Another instance found. Destroying this new one.");
+            Destroy(gameObject); // Destroy this new instance
+            return;
+        }
+        Instance = this;
+        // DontDestroyOnLoad(gameObject); // Consider if camera should persist across different game scenes
 
+        mainCamera = GetComponent<Camera>();
         if (mainCamera == null)
         {
-            Debug.LogError("CameraController: No Camera component found on this GameObject.");
+            Debug.LogError("CameraController: No Camera component found on this GameObject. Disabling script.");
+            enabled = false; // Disable script if no camera
+            if (Instance == this) // If this was the one that set itself as Instance
+            {
+                Instance = null; // Nullify the instance if it's unusable
+            }
         }
+    }
 
-        if (playerTarget == null)
+    private void OnDestroy()
+    {
+        // If this was the singleton instance, clear it when destroyed
+        if (Instance == this)
         {
-            Debug.LogError("CameraController: playerTarget is not assigned.  Please assign in the inspector.");
+            Instance = null;
         }
     }
 
     private void LateUpdate()
     {
+        if (!enabled || mainCamera == null) return; // Don't run if disabled or no camera
+
         // Collect Active Targets
         List<Transform> currentTargets = new List<Transform>();
 
-        if (playerTarget != null)
+        if (playerTarget != null && playerTarget.gameObject.activeInHierarchy) // Check if playerTarget is active
         {
             currentTargets.Add(playerTarget);
         }
@@ -60,7 +82,7 @@ public class CameraController : MonoBehaviour
 
         if (currentTargets.Count == 0)
         {
-            Debug.LogWarning("CameraController: No active targets found.  Please ensure playerTarget and/or enemyTargets are assigned and active.");
+            // Debug.LogWarning("CameraController: No active targets found."); // This can be spammy, maybe remove or make conditional
             return;
         }
 

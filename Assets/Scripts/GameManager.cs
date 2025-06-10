@@ -109,7 +109,7 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    private Vector3 GetRandomRespawnPoint()
+    public Vector3 GetRandomRespawnPoint()
     {
         if (respawnPoints != null && respawnPoints.Length > 0)
         {

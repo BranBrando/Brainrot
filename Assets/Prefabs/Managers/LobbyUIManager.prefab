@@ -1,0 +1,65 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &5701192440300447386
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3506913193188568756}
+  - component: {fileID: 4081438415250893797}
+  m_Layer: 0
+  m_Name: LobbyUIManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3506913193188568756
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5701192440300447386}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 3.94773, y: -2.80717, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4081438415250893797
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5701192440300447386}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 75e963aad41027f4f9d21b6fb3d8a1c2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mainPanel: {fileID: 0}
+  lobbyListPanel: {fileID: 0}
+  inLobbyPanel: {fileID: 0}
+  playerNameInputField: {fileID: 0}
+  statusText: {fileID: 0}
+  createLobbyNameInputField: {fileID: 0}
+  createLobbyMaxPlayersInputField: {fileID: 0}
+  createLobbyPrivateToggle: {fileID: 0}
+  createLobbyButton: {fileID: 0}
+  refreshLobbiesButton: {fileID: 0}
+  lobbyListContentParent: {fileID: 0}
+  lobbyItemPrefab: {fileID: 7936094586371404847, guid: b306a0fd61e62a54493be4dd0ce2121c, type: 3}
+  joinLobbyCodeInputField: {fileID: 0}
+  joinLobbyByCodeButton: {fileID: 0}
+  currentLobbyNameText: {fileID: 0}
+  currentLobbyCodeText: {fileID: 0}
+  currentLobbyPlayersText: {fileID: 0}
+  startGameButton: {fileID: 0}
+  leaveLobbyButton: {fileID: 0}

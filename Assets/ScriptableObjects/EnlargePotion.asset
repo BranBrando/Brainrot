@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bf8578cc1ae53904c9a1b4db26f33464, type: 3}
+  m_Name: EnlargePotion
+  m_EditorClassIdentifier: 
+  effects:
+  - effectType: 4
+    magnitude: 1.2
+    duration: 10
+  - effectType: 5
+    magnitude: 2
+    duration: 10
+  - effectType: 1
+    magnitude: 1.2
+    duration: 10
+  itemSprite: {fileID: 10915, guid: 0000000000000000f000000000000000, type: 0}
+  itemPickupWorldPrefab: {fileID: 6955071808917931852, guid: e544d18e767f6ca4cbd19b4f6397e7c2, type: 3}
+  itemName: New Item
+  description: Applies an effect to the player.
