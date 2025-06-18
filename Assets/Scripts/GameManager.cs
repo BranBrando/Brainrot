@@ -1,6 +1,8 @@
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq; // Required for OfType<T>()
+using GameInterfaces; // Required for IHealth interface
 
 public class GameManager : MonoBehaviour
 {
@@ -12,7 +14,7 @@ public class GameManager : MonoBehaviour
     public int defaultAIStartingStocks = 1; // AI can have different stock counts
     public float respawnDelay = 2.0f;
 
-    private List<Health> activeEntities = new List<Health>();
+    private List<IHealth> activeEntities = new List<IHealth>();
 
     void Awake()
     {
@@ -35,7 +37,7 @@ public class GameManager : MonoBehaviour
         SetupNewGame();
     }
 
-    public void RegisterEntity(Health entityHealth)
+    public void RegisterEntity(IHealth entityHealth)
     {
         if (!activeEntities.Contains(entityHealth))
         {
@@ -44,7 +46,7 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    public void RequestRespawn(Health entityHealth)
+    public void RequestRespawn(IHealth entityHealth)
     {
         if (activeEntities.Contains(entityHealth)) // Only respawn if still in the game
         {
@@ -52,7 +54,7 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    private IEnumerator RespawnEntityCoroutine(Health entityHealth)
+    private IEnumerator RespawnEntityCoroutine(IHealth entityHealth)
     {
         yield return new WaitForSeconds(respawnDelay);
 
@@ -64,7 +66,7 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    public void EntityDefeated(Health entityHealth)
+    public void EntityDefeated(IHealth entityHealth)
     {
         Debug.Log($"{entityHealth.gameObject.name} is out of the game!");
         if (activeEntities.Contains(entityHealth))
@@ -78,10 +80,10 @@ public class GameManager : MonoBehaviour
     private void CheckForWinCondition()
     {
         int playersRemaining = 0;
-        Health lastPlayer = null;
+        IHealth lastPlayer = null;
 
         // Count remaining players
-        foreach (Health entity in activeEntities)
+        foreach (IHealth entity in activeEntities)
         {
             if (entity.isPlayerCharacter)
             {
@@ -127,9 +129,10 @@ public class GameManager : MonoBehaviour
     public void SetupNewGame()
     {
         activeEntities.Clear();
-        Health[] allEntities = FindObjectsByType<Health>(FindObjectsSortMode.None); // Include inactive objects
+        // Find all MonoBehaviour components and filter for those that implement IHealth
+        IHealth[] allEntities = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None).OfType<IHealth>().ToArray();
 
-        foreach (Health entity in allEntities)
+        foreach (IHealth entity in allEntities)
         {
             // Reset state and register
             int stocks = entity.isPlayerCharacter ? defaultPlayerStartingStocks : defaultAIStartingStocks;

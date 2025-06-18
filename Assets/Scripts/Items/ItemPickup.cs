@@ -1,5 +1,6 @@
 using UnityEngine;
 using Unity.Netcode;
+using GameInterfaces; // Added for IPlayerMovement interface
 
 public class ItemPickup : NetworkBehaviour
 {
@@ -60,11 +61,14 @@ public class ItemPickup : NetworkBehaviour
 
         if (!IsServer) return;
 
-        PlayerMovement player = other.GetComponent<PlayerMovement>();
-        if (player != null)
+        IPlayerMovement playerMovementMarker = other.GetComponent<IPlayerMovement>();
+        if (playerMovementMarker != null) // Check if it's a player via the interface
         {
-            PlayerBuffManager playerBuffManager = player.GetComponent<PlayerBuffManager>();
-            if (playerBuffManager != null)
+            PlayerBuffManager playerBuffManager = other.GetComponent<PlayerBuffManager>();
+            // For OwnerClientId, we'll get the NetworkObject component directly from 'other'
+            NetworkObject networkObject = other.GetComponent<NetworkObject>(); 
+
+            if (playerBuffManager != null && networkObject != null)
             {
                 foreach (var effectData in itemEffect.effects)
                 {
@@ -74,12 +78,19 @@ public class ItemPickup : NetworkBehaviour
                         effectData.duration
                     );
                 }
-                Debug.Log($"Server: Player {player.OwnerClientId} picked up {itemEffect.itemName}. Applied {itemEffect.effects.Count} effects.");
+                Debug.Log($"Server: Player {networkObject.OwnerClientId} picked up {itemEffect.itemName}. Applied {itemEffect.effects.Count} effects.");
                 GetComponent<NetworkObject>()?.Despawn();
             }
             else
             {
-                Debug.LogWarning($"Player {player.OwnerClientId} collided with item, but has no PlayerBuffManager!", player);
+                if (networkObject != null)
+                {
+                    Debug.LogWarning($"Player {networkObject.OwnerClientId} (with IPlayerMovement) collided with item, but has no PlayerBuffManager!", other.gameObject);
+                }
+                else
+                {
+                     Debug.LogWarning($"Object {other.name} (with IPlayerMovement) collided with item, but is missing PlayerBuffManager or NetworkObject for ID!", other.gameObject);
+                }
             }
         }
     }

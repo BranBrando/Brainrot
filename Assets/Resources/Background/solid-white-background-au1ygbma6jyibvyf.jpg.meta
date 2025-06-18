@@ -134,7 +134,8 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      solid-white-background-au1ygbma6jyibvyf_0: -537191820751729289
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

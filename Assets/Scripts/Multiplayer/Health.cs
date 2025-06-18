@@ -3,16 +3,17 @@ using System.Collections;
 using System.Collections.Generic; // Added for List
 using Unity.Netcode;
 using Unity.VisualScripting; // Added for networking
+using GameInterfaces; // Added for IHealth interface
 // using Brainrot.Player; // Removed as PlayerBuffManager is now in global namespace
 
 [RequireComponent(typeof(Rigidbody2D))]
-public class Health : NetworkBehaviour // Changed to NetworkBehaviour
+public class Health : NetworkBehaviour, IHealth // Changed to NetworkBehaviour and implemented IHealth
 {
-    public bool isPlayerCharacter = true; // Inspector-settable flag to differentiate behavior
+    public bool isPlayerCharacter { get; } = true; // Inspector-settable flag to differentiate behavior
 
     [Header("Combat Mechanics")]
-    public float currentDamagePercentage = 0f;
-    public int stocks = 3; // Default, can be overridden by GameManager for players
+    public float currentDamagePercentage { get; set; } = 0f;
+    public int stocks { get; set; } = 3; // Default, can be overridden by GameManager for players
 
     [Header("Knockback & Knockout Forces")]
     public float standardKnockbackForce = 5f; // The constant force for regular hits.
@@ -210,13 +211,13 @@ public class Health : NetworkBehaviour // Changed to NetworkBehaviour
         rb.linearDamping = normalLinearDamping;
         gameObject.SetActive(true);
 
-        PlayerMovement playerMovement = GetComponent<PlayerMovement>();
+        MultiplayerPlayerMovement playerMovement = GetComponent<MultiplayerPlayerMovement>();
         if (playerMovement != null)
         {
             playerMovement.ResetMovementStates();
         }
 
-        PlayerAttack playerAttack = GetComponent<PlayerAttack>();
+        MultiplayerPlayerAttack playerAttack = GetComponent<MultiplayerPlayerAttack>();
         if (playerAttack != null)
         {
             playerAttack.ResetAttackStates();
@@ -239,7 +240,7 @@ public class Health : NetworkBehaviour // Changed to NetworkBehaviour
     // Collision Damping Logic (Refined)
     void OnCollisionEnter2D(Collision2D collision)
     {
-        Health otherHealth = collision.gameObject.GetComponent<Health>();
+        IHealth otherHealth = collision.gameObject.GetComponent<IHealth>();
         if (otherHealth != null) // Colliding with another character
         {
             inContactWithOtherCharacter = true;
@@ -253,7 +254,7 @@ public class Health : NetworkBehaviour // Changed to NetworkBehaviour
 
     void OnCollisionStay2D(Collision2D collision)
     {
-        Health otherHealth = collision.gameObject.GetComponent<Health>();
+        IHealth otherHealth = collision.gameObject.GetComponent<IHealth>();
         if (otherHealth != null) // Colliding with another character
         {
             inContactWithOtherCharacter = true; // Ensure flag is set
@@ -267,7 +268,7 @@ public class Health : NetworkBehaviour // Changed to NetworkBehaviour
 
     void OnCollisionExit2D(Collision2D collision)
     {
-        Health otherHealth = collision.gameObject.GetComponent<Health>();
+        IHealth otherHealth = collision.gameObject.GetComponent<IHealth>();
         if (otherHealth != null) // No longer colliding with another character
         {
             inContactWithOtherCharacter = false;
